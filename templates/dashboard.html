@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="row">
+
+    <div class="col-12">
+
+        <h2 class="mb-4">
+            Cyber Threat Intelligence Dashboard
+        </h2>
+
+    </div>
+
+</div>
+
+<div class="row">
+
+    <div class="col-md-3">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h5>Critical</h5>
+
+                <h1 class="text-danger">0</h1>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h5>High</h5>
+
+                <h1 class="text-warning">0</h1>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h5>Medium</h5>
+
+                <h1 class="text-primary">0</h1>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h5>Low</h5>
+
+                <h1 class="text-success">0</h1>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<div class="row mt-4">
+
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                Threat Trend (Last 7 Days)
+            </div>
+
+            <div class="card-body">
+
+                <canvas id="threatChart" height="100"></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                AI Summary
+            </div>
+
+            <div class="card-body">
+
+                <p>
+                    No threat data available.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const ctx = document.getElementById('threatChart');
+
+new Chart(ctx, {
+
+    type: 'line',
+
+    data: {
+
+        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+
+        datasets: [{
+
+            label: 'Threats',
+
+            data: [2,5,4,8,3,6,7],
+
+            borderWidth:2,
+
+            tension:0.3
+
+        }]
+
+    }
+
+});
+
+</script>
+
+
+{% endblock %}
