@@ -1,13 +1,7 @@
-from flask import Flask, render_template
-from config import Config
-
-app = Flask(__name__)
-app.config.from_object(Config)
+from app import create_app
 
 
-@app.route("/")
-def dashboard():
-    return render_template("dashboard.html")
+app = create_app()
 
 
 if __name__ == "__main__":
