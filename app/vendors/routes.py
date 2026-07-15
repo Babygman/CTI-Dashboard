@@ -53,3 +53,44 @@ def add_vendor():
             return redirect(url_for("vendors.vendor_list"))
 
     return render_template("vendor_add.html", form_data=form_data, errors=errors)
+
+@vendors_blueprint.route("/vendors/<int:vendor_id>/edit", methods=["GET", "POST"])
+def edit_vendor(vendor_id):
+    vendor = db.get_or_404(Vendor, vendor_id)
+    errors = {}
+
+    if request.method == "POST":
+        form_data = {
+            "vendor_name": request.form.get("vendor_name", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "website": request.form.get("website", "").strip(),
+            "enabled": "enabled" in request.form,
+        }
+
+        if not form_data["vendor_name"]:
+            errors["vendor_name"] = "Vendor Name is required."
+        elif len(form_data["vendor_name"]) > 100:
+            errors["vendor_name"] = "Vendor Name must be 100 characters or fewer."
+
+        if len(form_data["category"]) > 100:
+            errors["category"] = "Category must be 100 characters or fewer."
+
+        if len(form_data["website"]) > 255:
+            errors["website"] = "Website must be 255 characters or fewer."
+
+        if not errors:
+            vendor.VendorName = form_data["vendor_name"]
+            vendor.Category = form_data["category"] or None
+            vendor.Website = form_data["website"] or None
+            vendor.Enabled = form_data["enabled"]
+            db.session.commit()
+            return redirect(url_for("vendors.vendor_list"))
+    else:
+        form_data = {
+            "vendor_name": vendor.VendorName,
+            "category": vendor.Category or "",
+            "website": vendor.Website or "",
+            "enabled": bool(vendor.Enabled),
+        }
+
+    return render_template("vendor_edit.html", form_data=form_data, errors=errors)

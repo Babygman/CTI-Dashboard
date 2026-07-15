@@ -18,6 +18,7 @@
                         <th>Category</th>
                         <th>Website</th>
                         <th>Enabled</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,10 +28,14 @@
                         <td>{{ vendor.Category or '' }}</td>
                         <td>{{ vendor.Website or '' }}</td>
                         <td>{{ 'Yes' if vendor.Enabled else 'No' }}</td>
+                        <td>
+                            <a href="{{ url_for('vendors.edit_vendor', vendor_id=vendor.VendorId) }}"
+                               class="btn btn-sm btn-outline-primary">Edit</a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted">No vendors found.</td>
+                        <td colspan="5" class="text-center text-muted">No vendors found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
