@@ -1,5 +1,4 @@
 from flask import Flask
-from sqlalchemy import text
 
 from config import Config
 
@@ -11,12 +10,8 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-  
-
     db.init_app(app)
 
-    with app.app_context():
-       
     from .auth import auth_blueprint
     from .dashboard import dashboard_blueprint
     from .threats import threats_blueprint
