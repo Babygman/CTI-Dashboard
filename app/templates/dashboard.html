@@ -2,156 +2,129 @@
 
 {% block content %}
 
-<div class="row">
+<h2 class="mb-4">Cyber Threat Intelligence Dashboard</h2>
 
-    <div class="col-12">
-
-        <h2 class="mb-4">
-            Cyber Threat Intelligence Dashboard
-        </h2>
-
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3">
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Total Threats</h5>
+                <h1>{{ total_threats }}</h1>
+            </div>
+        </div>
     </div>
 
-</div>
-
-<div class="row">
-
-    <div class="col-md-3">
-
-        <div class="card shadow-sm">
-
+    <div class="col">
+        <div class="card shadow-sm h-100">
             <div class="card-body">
-
                 <h5>Critical</h5>
-
-                <h1 class="text-danger">0</h1>
-
+                <h1 class="text-danger">{{ critical_threats }}</h1>
             </div>
-
         </div>
-
     </div>
 
-    <div class="col-md-3">
-
-        <div class="card shadow-sm">
-
+    <div class="col">
+        <div class="card shadow-sm h-100">
             <div class="card-body">
-
                 <h5>High</h5>
-
-                <h1 class="text-warning">0</h1>
-
+                <h1 class="text-warning">{{ high_threats }}</h1>
             </div>
-
         </div>
-
     </div>
 
-    <div class="col-md-3">
-
-        <div class="card shadow-sm">
-
+    <div class="col">
+        <div class="card shadow-sm h-100">
             <div class="card-body">
-
-                <h5>Medium</h5>
-
-                <h1 class="text-primary">0</h1>
-
+                <h5>KEV</h5>
+                <h1 class="text-primary">{{ kev_threats }}</h1>
             </div>
-
         </div>
-
     </div>
 
-    <div class="col-md-3">
-
-        <div class="card shadow-sm">
-
+    <div class="col">
+        <div class="card shadow-sm h-100">
             <div class="card-body">
-
-                <h5>Low</h5>
-
-                <h1 class="text-success">0</h1>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-<div class="row mt-4">
-
-    <div class="col-lg-8">
-
-        <div class="card shadow-sm">
-
-            <div class="card-header">
-                Threat Trend (Last 7 Days)
-            </div>
-
-            <div class="card-body">
-
-                <canvas id="threatChart" height="100"></canvas>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="col-lg-4">
-
-        <div class="card shadow-sm">
-
-            <div class="card-header">
-                AI Summary
-            </div>
-
-            <div class="card-body">
-
-                <p>
-                    No threat data available.
+                <h5>Last Update</h5>
+                <p class="fs-5 mb-0">
+                    {{ last_update.strftime('%Y-%m-%d %H:%M') if last_update else 'No data' }}
                 </p>
-
             </div>
-
         </div>
+    </div>
+</div>
 
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">Threats by Severity</div>
+            <div class="card-body">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
     </div>
 
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">Threats by Vendor</div>
+            <div class="card-body">
+                <canvas id="vendorChart"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
+const severityLabels = {{ severity_labels | tojson }};
+const severityValues = {{ severity_values | tojson }};
+const vendorLabels = {{ vendor_labels | tojson }};
+const vendorValues = {{ vendor_values | tojson }};
 
-const ctx = document.getElementById('threatChart');
-
-new Chart(ctx, {
-
-    type: 'line',
-
+new Chart(document.getElementById('severityChart'), {
+    type: 'doughnut',
     data: {
-
-        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-
+        labels: severityLabels,
         datasets: [{
-
-            label: 'Threats',
-
-            data: [2,5,4,8,3,6,7],
-
-            borderWidth:2,
-
-            tension:0.3
-
+            data: severityValues,
+            backgroundColor: ['#dc3545', '#ffc107', '#0d6efd', '#198754', '#6c757d']
         }]
-
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
     }
-
 });
 
+new Chart(document.getElementById('vendorChart'), {
+    type: 'bar',
+    data: {
+        labels: vendorLabels,
+        datasets: [{
+            label: 'Threats',
+            data: vendorValues,
+            backgroundColor: '#0d6efd'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
 </script>
-
 
 {% endblock %}

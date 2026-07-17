@@ -33,7 +33,7 @@
 
         <div class="ms-auto text-white">
 
-            Version 1.0
+            Version 0.5.0-alpha
 
         </div>
 
@@ -53,25 +53,25 @@
 
                 <a href="/" class="list-group-item list-group-item-action">
 
-                    📊 Dashboard
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
 
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('threats.threat_list') }}" class="list-group-item list-group-item-action">
 
-                    🚨 Threat Feed
+                    <i class="bi bi-shield-exclamation me-2"></i>Threat Feed
 
                 </a>
 
                 <a href="{{ url_for('vendors.vendor_list') }}" class="list-group-item list-group-item-action">
 
-                    🛡 Vendors
+                    <i class="bi bi-building me-2"></i>Vendors
 
                 </a>
 
                 <a href="#" class="list-group-item list-group-item-action">
 
-                    ⚙ Settings
+                    <i class="bi bi-gear-fill me-2"></i>Settings
 
                 </a>
 
@@ -81,6 +81,11 @@
 
         <div class="col-md-10 p-4">
 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
             {% block content %}
 
             {% endblock %}

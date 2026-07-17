@@ -1,7 +1,9 @@
-from flask import redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
+from app.models.threat import Threat
 from app.models.vendor import Vendor
 
 from . import vendors_blueprint
@@ -19,6 +21,22 @@ def _vendor_name_exists(vendor_name, excluded_vendor_id=None):
 @vendors_blueprint.route("/vendors")
 def vendor_list():
     query = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
+    sort = request.args.get("sort", "vendor_name")
+    direction = request.args.get("direction", "asc")
+
+    sort_columns = {
+        "vendor_name": Vendor.VendorName,
+        "category": Vendor.Category,
+        "website": Vendor.Website,
+        "enabled": Vendor.Enabled,
+    }
+    if sort not in sort_columns or direction not in {"asc", "desc"}:
+        sort = "vendor_name"
+        direction = "asc"
+    if page is None or page < 1:
+        page = 1
+
     statement = db.select(Vendor)
 
     if query:
@@ -30,8 +48,24 @@ def vendor_list():
             )
         )
 
-    vendors = db.session.execute(statement).scalars().all()
-    return render_template("vendors.html", vendors=vendors, q=query)
+    sort_column = sort_columns[sort]
+    sort_expression = sort_column.desc() if direction == "desc" else sort_column.asc()
+    statement = statement.order_by(sort_expression, Vendor.VendorId.asc())
+
+    pagination = db.paginate(statement, page=page, per_page=10, error_out=False)
+    if pagination.pages and page > pagination.pages:
+        pagination = db.paginate(
+            statement, page=pagination.pages, per_page=10, error_out=False
+        )
+
+    return render_template(
+        "vendors.html",
+        vendors=pagination.items,
+        pagination=pagination,
+        q=query,
+        sort=sort,
+        direction=direction,
+    )
 
 
 @vendors_blueprint.route("/vendors/add", methods=["GET", "POST"])
@@ -75,6 +109,7 @@ def add_vendor():
             )
             db.session.add(vendor)
             db.session.commit()
+            flash("Vendor added successfully.", "success")
             return redirect(url_for("vendors.vendor_list"))
 
     return render_template("vendor_add.html", form_data=form_data, errors=errors)
@@ -115,6 +150,7 @@ def edit_vendor(vendor_id):
             vendor.Website = form_data["website"] or None
             vendor.Enabled = form_data["enabled"]
             db.session.commit()
+            flash("Vendor updated successfully.", "success")
             return redirect(url_for("vendors.vendor_list"))
     else:
         form_data = {
@@ -130,6 +166,22 @@ def edit_vendor(vendor_id):
 @vendors_blueprint.route("/vendors/<int:vendor_id>/delete", methods=["POST"])
 def delete_vendor(vendor_id):
     vendor = db.get_or_404(Vendor, vendor_id)
-    db.session.delete(vendor)
-    db.session.commit()
+    referenced = db.session.scalar(
+        db.select(Threat.ThreatId)
+        .where(Threat.VendorId == vendor_id)
+        .limit(1)
+    )
+    if referenced is not None:
+        flash("Vendor cannot be deleted because it is used by threats.", "warning")
+        return redirect(url_for("vendors.vendor_list"))
+
+    try:
+        db.session.delete(vendor)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("Vendor cannot be deleted because it is in use.", "warning")
+        return redirect(url_for("vendors.vendor_list"))
+
+    flash("Vendor deleted successfully.", "success")
     return redirect(url_for("vendors.vendor_list"))

@@ -22,4 +22,8 @@ def create_app(config_class=Config):
     app.register_blueprint(vendors_blueprint)
     app.register_blueprint(threats_blueprint)
 
+    from .collectors.commands import collector_cli
+
+    app.cli.add_command(collector_cli)
+
     return app

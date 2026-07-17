@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">{{ page_title }}</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control{% if errors.get('title') %} is-invalid{% endif %}"
+                           id="title" name="title" maxlength="255"
+                           value="{{ form_data.title }}" required>
+                    {% if errors.get('title') %}
+                    <div class="invalid-feedback">{{ errors.title }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="vendor_id" class="form-label">Vendor</label>
+                    <select class="form-select{% if errors.get('vendor_id') %} is-invalid{% endif %}"
+                            id="vendor_id" name="vendor_id">
+                        <option value="">No Vendor</option>
+                        {% for vendor in vendors %}
+                        <option value="{{ vendor.VendorId }}"
+                                {% if form_data.vendor_id|int == vendor.VendorId %}selected{% endif %}>
+                            {{ vendor.VendorName }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.get('vendor_id') %}
+                    <div class="invalid-feedback">{{ errors.vendor_id }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="source" class="form-label">Source</label>
+                    <input type="text" class="form-control{% if errors.get('source') %} is-invalid{% endif %}"
+                           id="source" name="source" maxlength="100" value="{{ form_data.source }}">
+                    {% if errors.get('source') %}
+                    <div class="invalid-feedback">{{ errors.source }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label for="severity" class="form-label">Severity</label>
+                    <select class="form-select{% if errors.get('severity') %} is-invalid{% endif %}"
+                            id="severity" name="severity">
+                        <option value="">Unspecified</option>
+                        {% for severity in severity_options %}
+                        <option value="{{ severity }}"
+                                {% if form_data.severity == severity %}selected{% endif %}>
+                            {{ severity }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.get('severity') %}
+                    <div class="invalid-feedback">{{ errors.severity }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label for="cve" class="form-label">CVE</label>
+                    <input type="text" class="form-control{% if errors.get('cve') %} is-invalid{% endif %}"
+                           id="cve" name="cve" maxlength="50" value="{{ form_data.cve }}">
+                    {% if errors.get('cve') %}
+                    <div class="invalid-feedback">{{ errors.cve }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label for="cvss" class="form-label">CVSS</label>
+                    <input type="number" class="form-control{% if errors.get('cvss') %} is-invalid{% endif %}"
+                           id="cvss" name="cvss" min="0" max="10" step="0.1"
+                           value="{{ form_data.cvss }}">
+                    {% if errors.get('cvss') %}
+                    <div class="invalid-feedback">{{ errors.cvss }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="published_date" class="form-label">Published Date</label>
+                    <input type="datetime-local"
+                           class="form-control{% if errors.get('published_date') %} is-invalid{% endif %}"
+                           id="published_date" name="published_date"
+                           value="{{ form_data.published_date }}">
+                    {% if errors.get('published_date') %}
+                    <div class="invalid-feedback">{{ errors.published_date }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="reference_url" class="form-label">Reference URL</label>
+                    <input type="url"
+                           class="form-control{% if errors.get('reference_url') %} is-invalid{% endif %}"
+                           id="reference_url" name="reference_url" maxlength="1000"
+                           value="{{ form_data.reference_url }}">
+                    {% if errors.get('reference_url') %}
+                    <div class="invalid-feedback">{{ errors.reference_url }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label for="summary" class="form-label">Summary</label>
+                    <textarea class="form-control" id="summary" name="summary" rows="4">{{ form_data.summary }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <label for="recommendation" class="form-label">Recommendation</label>
+                    <textarea class="form-control" id="recommendation" name="recommendation" rows="4">{{ form_data.recommendation }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="kev" name="kev"
+                               {% if form_data.kev %}checked{% endif %}>
+                        <label for="kev" class="form-check-label">Known Exploited Vulnerability (KEV)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{{ url_for('threats.threat_list') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
