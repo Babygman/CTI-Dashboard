@@ -31,6 +31,10 @@ def content_hash(item: NormalizedItem) -> str:
         "due_date": item.due_date.isoformat() if item.due_date else None,
         "notes": item.notes or "",
     }
+    if item.source_modified_date is not None:
+        canonical["source_modified_date"] = item.source_modified_date.isoformat()
+    if item.normalized_metadata is not None:
+        canonical["normalized_metadata"] = item.normalized_metadata
     payload = json.dumps(
         canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     )
@@ -68,7 +72,10 @@ def threat_by_identity(item: NormalizedItem):
         statement = db.select(Threat).where(
             func.upper(Threat.CVE) == item.cve_ids[0]
         )
-        return db.session.scalar(statement)
+        matches = db.session.scalars(statement.limit(2)).all()
+        if len(matches) > 1:
+            raise ValueError(f"ambiguous Threat match for CVE: {item.cve_ids[0]}")
+        return matches[0] if matches else None
 
     statement = db.select(Threat).where(func.lower(Threat.Title) == item.title.lower())
     return db.session.scalar(statement)

@@ -29,6 +29,8 @@ class NormalizedItem:
     known_ransomware_campaign_use: str | None = None
     due_date: datetime | None = None
     notes: str | None = None
+    source_modified_date: datetime | None = None
+    normalized_metadata: str | None = None
 
 
 def _text(value: Any, maximum: int | None = None) -> str | None:
@@ -154,4 +156,6 @@ def normalize_item(item: dict[str, Any], source_name: str) -> NormalizedItem:
         ),
         due_date=_published_date(item.get("due_date")),
         notes=_text(item.get("notes")),
+        source_modified_date=_published_date(item.get("source_modified_date")),
+        normalized_metadata=_text(item.get("normalized_metadata")),
     )

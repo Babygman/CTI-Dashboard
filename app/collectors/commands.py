@@ -11,6 +11,7 @@ from app.models.source import Source
 
 from . import collector_registry
 from .cisa_kev import CISA_KEV_FEED_URL
+from .nvd import NVD_MODIFIED_FEED_URL
 from .service import run_collector
 
 
@@ -28,6 +29,7 @@ INITIAL_SOURCES = (
         "SourceName": "NVD",
         "SourceType": "Nvd",
         "BaseUrl": "https://nvd.nist.gov",
+        "FeedUrl": NVD_MODIFIED_FEED_URL,
     },
     {
         "SourceName": "Microsoft Security Response Center",
@@ -86,7 +88,14 @@ def seed_sources():
     click.echo(f"Source seeding complete: created={created}, existing={existing}")
 
 
-RUNNABLE_COLLECTORS = {"cisa-kev": "CisaKev"}
+RUNNABLE_COLLECTORS = {
+    "cisa-kev": "CisaKev",
+    "nvd": "Nvd",
+}
+DEFAULT_FEED_URLS = {
+    "CisaKev": CISA_KEV_FEED_URL,
+    "Nvd": NVD_MODIFIED_FEED_URL,
+}
 
 
 @collector_cli.command("run")
@@ -101,13 +110,14 @@ def run_named_collector(collector_name):
     source = _source_by_name(collector_class.source_name)
     if source is None:
         raise click.ClickException(
-            "CISA KEV source is not configured. Run collector seed-sources first."
+            f"{collector_class.source_name} source is not configured. "
+            "Run collector seed-sources first."
         )
 
     collector = collector_registry.create(
         source_type,
         timeout_seconds=source.TimeoutSeconds,
-        feed_url=source.FeedUrl or CISA_KEV_FEED_URL,
+        feed_url=source.FeedUrl or DEFAULT_FEED_URLS[source_type],
     )
     started = perf_counter()
     result = run_collector(
