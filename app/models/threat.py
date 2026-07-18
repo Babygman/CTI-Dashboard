@@ -29,5 +29,6 @@ class Threat(db.Model):
     CreatedAt = db.Column(
         DATETIME_TYPE, nullable=False, server_default=db.text("SYSUTCDATETIME()")
     )
+    ModifiedDate = db.Column(DATETIME_TYPE)
 
     vendor = db.relationship("Vendor")

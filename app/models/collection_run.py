@@ -50,3 +50,4 @@ class CollectionRun(db.Model):
     WorkerName = db.Column(db.Unicode(200))
 
     source = db.relationship("Source", back_populates="collection_runs")
+    source_items = db.relationship("SourceItem", back_populates="collection_run")

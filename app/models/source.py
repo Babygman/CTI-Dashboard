@@ -12,6 +12,9 @@ class Source(db.Model):
             name="CK_Sources_CollectionIntervalMinutes",
         ),
         db.CheckConstraint("TimeoutSeconds > 0", name="CK_Sources_TimeoutSeconds"),
+        db.CheckConstraint(
+            "Priority BETWEEN 0 AND 100", name="CK_Sources_Priority"
+        ),
         db.Index("IX_Sources_Enabled", "Enabled"),
     )
 
@@ -28,6 +31,9 @@ class Source(db.Model):
     )
     TimeoutSeconds = db.Column(
         db.Integer, nullable=False, default=30, server_default=db.text("30")
+    )
+    Priority = db.Column(
+        db.SmallInteger, nullable=False, default=50, server_default=db.text("50")
     )
     LastSuccessfulCollection = db.Column(DATETIME_TYPE)
     LastCollectionStatus = db.Column(db.Unicode(20))

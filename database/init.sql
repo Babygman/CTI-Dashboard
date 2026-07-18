@@ -36,6 +36,7 @@ BEGIN
         Recommendation NVARCHAR(MAX) NULL,
         CreatedAt DATETIME2 NOT NULL
             CONSTRAINT DF_Threats_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        ModifiedDate DATETIME2 NULL,
 
         CONSTRAINT FK_Threats_Vendors
             FOREIGN KEY (VendorId) REFERENCES dbo.Vendors(VendorId),
@@ -60,6 +61,8 @@ BEGIN
             CONSTRAINT DF_Sources_CollectionIntervalMinutes DEFAULT (60),
         TimeoutSeconds INT NOT NULL
             CONSTRAINT DF_Sources_TimeoutSeconds DEFAULT (30),
+        Priority SMALLINT NOT NULL
+            CONSTRAINT DF_Sources_Priority DEFAULT (50),
         LastSuccessfulCollection DATETIME2 NULL,
         LastCollectionStatus NVARCHAR(20) NULL,
         CreatedAt DATETIME2 NOT NULL
@@ -71,7 +74,9 @@ BEGIN
         CONSTRAINT CK_Sources_CollectionIntervalMinutes
             CHECK (CollectionIntervalMinutes > 0),
         CONSTRAINT CK_Sources_TimeoutSeconds
-            CHECK (TimeoutSeconds > 0)
+            CHECK (TimeoutSeconds > 0),
+        CONSTRAINT CK_Sources_Priority
+            CHECK (Priority BETWEEN 0 AND 100)
     );
 
     CREATE INDEX IX_Sources_Enabled
@@ -125,11 +130,16 @@ BEGIN
     (
         SourceItemId BIGINT IDENTITY(1,1) PRIMARY KEY,
         SourceId INT NOT NULL,
+        CollectionRunId BIGINT NULL,
         ExternalId NVARCHAR(500) NULL,
+        CVE NVARCHAR(50) NULL,
         ContentHash CHAR(64) NOT NULL,
         Title NVARCHAR(500) NULL,
         SourceUrl NVARCHAR(1000) NULL,
         PublishedDate DATETIME2 NULL,
+        SourceModifiedDate DATETIME2 NULL,
+        NormalizedMetadata NVARCHAR(MAX) NULL,
+        MatchMethod NVARCHAR(30) NULL,
         RawContent NVARCHAR(MAX) NULL,
         ProcessingStatus NVARCHAR(20) NOT NULL
             CONSTRAINT DF_SourceItems_ProcessingStatus DEFAULT (N'Pending'),
@@ -142,6 +152,9 @@ BEGIN
 
         CONSTRAINT FK_SourceItems_Sources
             FOREIGN KEY (SourceId) REFERENCES dbo.Sources(SourceId),
+        CONSTRAINT FK_SourceItems_CollectionRuns
+            FOREIGN KEY (CollectionRunId)
+            REFERENCES dbo.CollectionRuns(CollectionRunId),
         CONSTRAINT FK_SourceItems_Threats
             FOREIGN KEY (ThreatId) REFERENCES dbo.Threats(ThreatId),
         CONSTRAINT CK_SourceItems_ProcessingStatus
@@ -158,8 +171,139 @@ BEGIN
         ON dbo.SourceItems(ContentHash);
     CREATE INDEX IX_SourceItems_ProcessingStatus
         ON dbo.SourceItems(ProcessingStatus);
+    CREATE INDEX IX_SourceItems_CollectionRunId
+        ON dbo.SourceItems(CollectionRunId);
+    CREATE INDEX IX_SourceItems_CVE
+        ON dbo.SourceItems(CVE)
+        WHERE CVE IS NOT NULL;
+    CREATE INDEX IX_SourceItems_ThreatId_SourceId
+        ON dbo.SourceItems(ThreatId, SourceId)
+        INCLUDE (FirstSeenAt, LastSeenAt);
     CREATE UNIQUE INDEX UX_SourceItems_SourceId_ExternalId
         ON dbo.SourceItems(SourceId, ExternalId)
         WHERE ExternalId IS NOT NULL;
+END;
+GO
+IF COL_LENGTH(N'dbo.Threats', N'ModifiedDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.Threats
+        ADD ModifiedDate DATETIME2 NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.Sources', N'Priority') IS NULL
+BEGIN
+    ALTER TABLE dbo.Sources
+        ADD Priority SMALLINT NOT NULL
+            CONSTRAINT DF_Sources_Priority DEFAULT (50) WITH VALUES;
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.default_constraints AS dc
+    INNER JOIN sys.columns AS c
+        ON c.object_id = dc.parent_object_id
+        AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Sources')
+      AND c.name = N'Priority'
+)
+BEGIN
+    ALTER TABLE dbo.Sources
+        ADD CONSTRAINT DF_Sources_Priority DEFAULT (50) FOR Priority;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.CK_Sources_Priority', N'C') IS NULL
+BEGIN
+    ALTER TABLE dbo.Sources WITH CHECK
+        ADD CONSTRAINT CK_Sources_Priority
+            CHECK (Priority BETWEEN 0 AND 100);
+END;
+GO
+
+IF COL_LENGTH(N'dbo.SourceItems', N'CollectionRunId') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems
+        ADD CollectionRunId BIGINT NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.SourceItems', N'CVE') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems
+        ADD CVE NVARCHAR(50) NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.SourceItems', N'SourceModifiedDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems
+        ADD SourceModifiedDate DATETIME2 NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.SourceItems', N'NormalizedMetadata') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems
+        ADD NormalizedMetadata NVARCHAR(MAX) NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.SourceItems', N'MatchMethod') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems
+        ADD MatchMethod NVARCHAR(30) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.FK_SourceItems_CollectionRuns', N'F') IS NULL
+BEGIN
+    ALTER TABLE dbo.SourceItems WITH CHECK
+        ADD CONSTRAINT FK_SourceItems_CollectionRuns
+            FOREIGN KEY (CollectionRunId)
+            REFERENCES dbo.CollectionRuns(CollectionRunId);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SourceItems')
+      AND name = N'IX_SourceItems_CollectionRunId'
+)
+BEGIN
+    CREATE INDEX IX_SourceItems_CollectionRunId
+        ON dbo.SourceItems(CollectionRunId);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SourceItems')
+      AND name = N'IX_SourceItems_CVE'
+)
+BEGIN
+    CREATE INDEX IX_SourceItems_CVE
+        ON dbo.SourceItems(CVE)
+        WHERE CVE IS NOT NULL;
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SourceItems')
+      AND name = N'IX_SourceItems_ThreatId_SourceId'
+)
+BEGIN
+    CREATE INDEX IX_SourceItems_ThreatId_SourceId
+        ON dbo.SourceItems(ThreatId, SourceId)
+        INCLUDE (FirstSeenAt, LastSeenAt);
 END;
 GO
