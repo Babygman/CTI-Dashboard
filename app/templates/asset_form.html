@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">{{ page_title }}</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="asset_name" class="form-label">Asset Name</label>
+                    <input type="text" class="form-control{% if errors.get('asset_name') %} is-invalid{% endif %}"
+                           id="asset_name" name="asset_name" maxlength="200"
+                           value="{{ form_data.asset_name }}" required>
+                    {% if errors.get('asset_name') %}
+                    <div class="invalid-feedback">{{ errors.asset_name }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="asset_type" class="form-label">Asset Type</label>
+                    <input type="text" class="form-control{% if errors.get('asset_type') %} is-invalid{% endif %}"
+                           id="asset_type" name="asset_type" maxlength="100"
+                           value="{{ form_data.asset_type }}">
+                    {% if errors.get('asset_type') %}
+                    <div class="invalid-feedback">{{ errors.asset_type }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="vendor" class="form-label">Vendor</label>
+                    <input type="text" class="form-control{% if errors.get('vendor') %} is-invalid{% endif %}"
+                           id="vendor" name="vendor" maxlength="100"
+                           value="{{ form_data.vendor }}">
+                    {% if errors.get('vendor') %}
+                    <div class="invalid-feedback">{{ errors.vendor }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="product" class="form-label">Product</label>
+                    <input type="text" class="form-control{% if errors.get('product') %} is-invalid{% endif %}"
+                           id="product" name="product" maxlength="200"
+                           value="{{ form_data.product }}">
+                    {% if errors.get('product') %}
+                    <div class="invalid-feedback">{{ errors.product }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="version" class="form-label">Version</label>
+                    <input type="text" class="form-control{% if errors.get('version') %} is-invalid{% endif %}"
+                           id="version" name="version" maxlength="100"
+                           value="{{ form_data.version }}">
+                    {% if errors.get('version') %}
+                    <div class="invalid-feedback">{{ errors.version }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="catalog_product_id" class="form-label">
+                        Catalog Product
+                    </label>
+                    <select class="form-select{% if errors.get('catalog_product_id') %} is-invalid{% endif %}"
+                            id="catalog_product_id" name="catalog_product_id">
+                        <option value="">Not linked</option>
+                        {% for catalog_product in catalog_products %}
+                        <option value="{{ catalog_product.CatalogProductId }}"
+                                {% if form_data.catalog_product_id|string == catalog_product.CatalogProductId|string %}selected{% endif %}>
+                            {{ catalog_product.VendorName }} — {{ catalog_product.ProductName }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.get('catalog_product_id') %}
+                    <div class="invalid-feedback">{{ errors.catalog_product_id }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="environment" class="form-label">Environment</label>
+                    <input type="text" class="form-control{% if errors.get('environment') %} is-invalid{% endif %}"
+                           id="environment" name="environment" maxlength="100"
+                           value="{{ form_data.environment }}">
+                    {% if errors.get('environment') %}
+                    <div class="invalid-feedback">{{ errors.environment }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="owner" class="form-label">Owner</label>
+                    <input type="text" class="form-control{% if errors.get('owner') %} is-invalid{% endif %}"
+                           id="owner" name="owner" maxlength="200"
+                           value="{{ form_data.owner }}">
+                    {% if errors.get('owner') %}
+                    <div class="invalid-feedback">{{ errors.owner }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="location" class="form-label">Location</label>
+                    <input type="text" class="form-control{% if errors.get('location') %} is-invalid{% endif %}"
+                           id="location" name="location" maxlength="255"
+                           value="{{ form_data.location }}">
+                    {% if errors.get('location') %}
+                    <div class="invalid-feedback">{{ errors.location }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <input type="text" class="form-control{% if errors.get('status') %} is-invalid{% endif %}"
+                           id="status" name="status" maxlength="50"
+                           value="{{ form_data.status }}" placeholder="Active">
+                    {% if errors.get('status') %}
+                    <div class="invalid-feedback">{{ errors.status }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="critical" name="critical"
+                               {% if form_data.critical %}checked{% endif %}>
+                        <label for="critical" class="form-check-label">Critical Asset</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="4">{{ form_data.notes }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ url_for('assets.asset_list') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

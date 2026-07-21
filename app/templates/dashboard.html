@@ -1,8 +1,165 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
+
+{% macro asset_action_section(title, actions, empty_message) %}
+<div class="card shadow-sm mt-4">
+    <div class="card-header">{{ title }}</div>
+    <div class="card-body">
+        {% if actions %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Threat</th>
+                        <th>Asset</th>
+                        <th>Vendor</th>
+                        <th>Product</th>
+                        <th>Risk</th>
+                        <th>Priority</th>
+                        <th>Recommendation</th>
+                        <th>Target</th>
+                        <th>Reasons</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in actions %}
+                    <tr>
+                        <td>{{ item.threat_identifier }}</td>
+                        <td>{{ item.asset_name or 'Unknown' }}</td>
+                        <td>{{ item.vendor or 'Unknown' }}</td>
+                        <td>{{ item.product or 'Unknown' }}</td>
+                        <td>{{ item.risk_level or 'Unknown' }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.recommendation }}</td>
+                        <td>{{ item.target }}</td>
+                        <td>{{ item.reasons | join(', ') if item.reasons else 'None' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">{{ empty_message }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
 
 {% block content %}
 
-<h2 class="mb-4">Cyber Threat Intelligence Dashboard</h2>
+<h2 class="mb-4">Security Operations</h2>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-6 g-3">
+    <div class="col">
+        <div class="card shadow-sm h-100 border-danger">
+            <div class="card-body">
+                <h5>Patch Immediately</h5>
+                <h1 class="text-danger">{{ operations.summary.patch_immediately }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100 border-warning">
+            <div class="card-body">
+                <h5>Patch This Week</h5>
+                <h1 class="text-warning">{{ operations.summary.patch_this_week }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Review and Schedule</h5>
+                <h1>{{ operations.summary.review_and_schedule }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100 border-primary">
+            <div class="card-body">
+                <h5>Notify Users</h5>
+                <h1 class="text-primary">{{ operations.summary.notify_users }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Monitor</h5>
+                <h1>{{ operations.summary.monitor }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Analysis Errors</h5>
+                <h1>{{ operations.summary.analysis_errors }}</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ asset_action_section(
+    'Patch Immediately',
+    operations.patch_immediately,
+    'No immediate patch actions.'
+) }}
+
+{{ asset_action_section(
+    'Patch This Week',
+    operations.patch_this_week,
+    'No patch actions due this week.'
+) }}
+
+{{ asset_action_section(
+    'Review and Schedule',
+    operations.review_and_schedule,
+    'No remediation actions require scheduling.'
+) }}
+
+<div class="card shadow-sm mt-4">
+    <div class="card-header">User Awareness</div>
+    <div class="card-body">
+        {% if operations.communication_actions %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Threat</th>
+                        <th>Recommendation</th>
+                        <th>Priority</th>
+                        <th>Target</th>
+                        <th>Affected User Group</th>
+                        <th>Notification Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in operations.communication_actions %}
+                    <tr>
+                        <td>{{ item.threat_identifier }}</td>
+                        <td>{{ item.recommendation }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.target }}</td>
+                        <td>{{ item.affected_user_group or 'Not specified' }}</td>
+                        <td>{{ item.notification_reason or 'Not specified' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No user notifications required.</p>
+        {% endif %}
+    </div>
+</div>
+
+{{ asset_action_section(
+    'Monitoring',
+    operations.monitor,
+    'No monitoring items.'
+) }}
+
+<h3 class="mt-5 mb-3">Collection Health</h3>
 
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-5 g-3">
     <div class="col">
@@ -13,7 +170,6 @@
             </div>
         </div>
     </div>
-
     <div class="col">
         <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -22,7 +178,6 @@
             </div>
         </div>
     </div>
-
     <div class="col">
         <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -31,7 +186,6 @@
             </div>
         </div>
     </div>
-
     <div class="col">
         <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -40,7 +194,6 @@
             </div>
         </div>
     </div>
-
     <div class="col">
         <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -50,6 +203,88 @@
                 </p>
             </div>
         </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Total Source Items</h5>
+                <h1>{{ total_source_items }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>CISA Items</h5>
+                <h1>{{ cisa_source_items }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>NVD Items</h5>
+                <h1>{{ nvd_source_items }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Multi-source Threats</h5>
+                <h1>{{ multi_source_threats }}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5>Enabled Sources</h5>
+                <h1>{{ enabled_sources }}</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-header">Latest Collection Run</div>
+    <div class="card-body">
+        {% if latest_run %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                        <th>Completed</th>
+                        <th>Fetched</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Skipped</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ latest_run_source }}</td>
+                        <td>{{ latest_run.Status }}</td>
+                        <td>{{ latest_run.StartedAt.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            {{ latest_run.FinishedAt.strftime('%Y-%m-%d %H:%M:%S') if latest_run.FinishedAt else 'In progress' }}
+                        </td>
+                        <td>{{ latest_run.ItemsFetched }}</td>
+                        <td>{{ latest_run.ItemsCreated }}</td>
+                        <td>{{ latest_run.ItemsUpdated }}</td>
+                        <td>{{ latest_run.ItemsSkipped }}</td>
+                        <td>{{ latest_run_errors }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No collection runs recorded.</p>
+        {% endif %}
     </div>
 </div>
 
@@ -62,10 +297,9 @@
             </div>
         </div>
     </div>
-
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
-            <div class="card-header">Threats by Vendor</div>
+            <div class="card-header">Top 10 Vendors</div>
             <div class="card-body">
                 <canvas id="vendorChart"></canvas>
             </div>

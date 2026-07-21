@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-1">Add Product Alias</h2>
+<p class="text-muted mb-4">{{ product.VendorName }} — {{ product.ProductName }}</p>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div class="mb-3">
+                <label for="alias" class="form-label">Alias</label>
+                <input type="text"
+                       class="form-control{% if errors.get('alias') %} is-invalid{% endif %}"
+                       id="alias" name="alias" maxlength="200"
+                       value="{{ form_data.alias }}" required>
+                {% if errors.get('alias') %}
+                <div class="invalid-feedback">{{ errors.alias }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label for="alias_type" class="form-label">Alias Type</label>
+                <select class="form-select{% if errors.get('alias_type') %} is-invalid{% endif %}"
+                        id="alias_type" name="alias_type">
+                    <option value="">Unspecified</option>
+                    {% for alias_type in alias_types %}
+                    <option value="{{ alias_type }}"
+                            {% if form_data.alias_type == alias_type %}selected{% endif %}>
+                        {{ alias_type }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if errors.get('alias_type') %}
+                <div class="invalid-feedback">{{ errors.alias_type }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="active"
+                       name="active" {% if form_data.active %}checked{% endif %}>
+                <label for="active" class="form-check-label">Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ url_for('product_catalog.product_detail', catalog_product_id=product.CatalogProductId) }}"
+               class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

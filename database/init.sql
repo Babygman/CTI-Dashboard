@@ -307,3 +307,162 @@ BEGIN
         INCLUDE (FirstSeenAt, LastSeenAt);
 END;
 GO
+
+IF OBJECT_ID(N'dbo.Assets', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Assets
+    (
+        AssetId INT IDENTITY(1,1) PRIMARY KEY,
+        AssetName NVARCHAR(200) NOT NULL,
+        Vendor NVARCHAR(100) NULL,
+        Product NVARCHAR(200) NULL,
+        Version NVARCHAR(100) NULL,
+        AssetType NVARCHAR(100) NULL,
+        Critical BIT NOT NULL
+            CONSTRAINT DF_Assets_Critical DEFAULT (0),
+        Environment NVARCHAR(100) NULL,
+        Owner NVARCHAR(200) NULL,
+        Location NVARCHAR(255) NULL,
+        Status NVARCHAR(50) NOT NULL
+            CONSTRAINT DF_Assets_Status DEFAULT (N'Active'),
+        Notes NVARCHAR(MAX) NULL,
+        CreatedAt DATETIME2 NOT NULL
+            CONSTRAINT DF_Assets_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt DATETIME2 NOT NULL
+            CONSTRAINT DF_Assets_UpdatedAt DEFAULT (SYSUTCDATETIME())
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.CatalogProducts', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CatalogProducts
+    (
+        CatalogProductId INT IDENTITY(1,1) PRIMARY KEY,
+        VendorName NVARCHAR(100) NOT NULL,
+        ProductName NVARCHAR(200) NOT NULL,
+        ProductFamily NVARCHAR(100) NULL,
+        TechnologyCategory NVARCHAR(100) NULL,
+        Description NVARCHAR(MAX) NULL,
+        Active BIT NOT NULL
+            CONSTRAINT DF_CatalogProducts_Active DEFAULT (1),
+        CreatedAt DATETIME2 NOT NULL
+            CONSTRAINT DF_CatalogProducts_CreatedAt
+                DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt DATETIME2 NOT NULL
+            CONSTRAINT DF_CatalogProducts_UpdatedAt
+                DEFAULT (SYSUTCDATETIME()),
+
+        CONSTRAINT UQ_CatalogProducts_VendorName_ProductName
+            UNIQUE (VendorName, ProductName)
+    );
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.CatalogProducts')
+      AND name = N'IX_CatalogProducts_VendorName'
+)
+BEGIN
+    CREATE INDEX IX_CatalogProducts_VendorName
+        ON dbo.CatalogProducts(VendorName);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.CatalogProducts')
+      AND name = N'IX_CatalogProducts_ProductName'
+)
+BEGIN
+    CREATE INDEX IX_CatalogProducts_ProductName
+        ON dbo.CatalogProducts(ProductName);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.CatalogProducts')
+      AND name = N'IX_CatalogProducts_Active'
+)
+BEGIN
+    CREATE INDEX IX_CatalogProducts_Active
+        ON dbo.CatalogProducts(Active);
+END;
+GO
+
+IF OBJECT_ID(N'dbo.ProductAliases', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ProductAliases
+    (
+        ProductAliasId INT IDENTITY(1,1) PRIMARY KEY,
+        CatalogProductId INT NOT NULL,
+        Alias NVARCHAR(200) NOT NULL,
+        AliasType NVARCHAR(50) NULL,
+        Active BIT NOT NULL
+            CONSTRAINT DF_ProductAliases_Active DEFAULT (1),
+        CreatedAt DATETIME2 NOT NULL
+            CONSTRAINT DF_ProductAliases_CreatedAt
+                DEFAULT (SYSUTCDATETIME()),
+
+        CONSTRAINT FK_ProductAliases_CatalogProducts
+            FOREIGN KEY (CatalogProductId)
+            REFERENCES dbo.CatalogProducts(CatalogProductId)
+            ON DELETE CASCADE,
+        CONSTRAINT UQ_ProductAliases_CatalogProductId_Alias
+            UNIQUE (CatalogProductId, Alias)
+    );
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.ProductAliases')
+      AND name = N'IX_ProductAliases_Alias'
+)
+BEGIN
+    CREATE INDEX IX_ProductAliases_Alias
+        ON dbo.ProductAliases(Alias);
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Assets', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Assets', N'CatalogProductId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Assets
+        ADD CatalogProductId INT NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.FK_Assets_CatalogProducts', N'F') IS NULL
+   AND OBJECT_ID(N'dbo.Assets', N'U') IS NOT NULL
+   AND OBJECT_ID(N'dbo.CatalogProducts', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.Assets WITH CHECK
+        ADD CONSTRAINT FK_Assets_CatalogProducts
+            FOREIGN KEY (CatalogProductId)
+            REFERENCES dbo.CatalogProducts(CatalogProductId);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Assets')
+      AND name = N'IX_Assets_CatalogProductId'
+)
+BEGIN
+    CREATE INDEX IX_Assets_CatalogProductId
+        ON dbo.Assets(CatalogProductId);
+END;
+GO

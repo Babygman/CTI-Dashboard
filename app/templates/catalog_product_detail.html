@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">{{ product.VendorName }} — {{ product.ProductName }}</h2>
+        <p class="text-muted mb-0">Catalog Product</p>
+    </div>
+    <div>
+        <a href="{{ url_for('product_catalog.edit_product', catalog_product_id=product.CatalogProductId) }}"
+           class="btn btn-outline-primary">Edit Product</a>
+        <a href="{{ url_for('product_catalog.product_list') }}"
+           class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Vendor</dt>
+            <dd class="col-sm-9">{{ product.VendorName }}</dd>
+            <dt class="col-sm-3">Product</dt>
+            <dd class="col-sm-9">{{ product.ProductName }}</dd>
+            <dt class="col-sm-3">Family</dt>
+            <dd class="col-sm-9">{{ product.ProductFamily or '' }}</dd>
+            <dt class="col-sm-3">Technology Category</dt>
+            <dd class="col-sm-9">{{ product.TechnologyCategory or '' }}</dd>
+            <dt class="col-sm-3">Active</dt>
+            <dd class="col-sm-9">{{ 'Yes' if product.Active else 'No' }}</dd>
+            <dt class="col-sm-3">Linked Assets</dt>
+            <dd class="col-sm-9">{{ linked_asset_count }}</dd>
+            <dt class="col-sm-3">Description</dt>
+            <dd class="col-sm-9">{{ product.Description or '' }}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Aliases</h3>
+    <a href="{{ url_for('product_catalog.add_alias', catalog_product_id=product.CatalogProductId) }}"
+       class="btn btn-primary">+ Add Alias</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>Alias Type</th>
+                        <th>Active</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alias in aliases %}
+                    <tr>
+                        <td>{{ alias.Alias }}</td>
+                        <td>{{ alias.AliasType or '' }}</td>
+                        <td>{{ 'Yes' if alias.Active else 'No' }}</td>
+                        <td>{{ alias.CreatedAt.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <form method="post"
+                                  action="{{ url_for('product_catalog.delete_alias', catalog_product_id=product.CatalogProductId, product_alias_id=alias.ProductAliasId) }}"
+                                  onsubmit="return confirm('Are you sure you want to delete this alias?');">
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No aliases have been added.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

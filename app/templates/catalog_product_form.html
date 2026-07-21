@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">{{ page_title }}</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="vendor_name" class="form-label">Vendor</label>
+                    <input type="text"
+                           class="form-control{% if errors.get('vendor_name') %} is-invalid{% endif %}"
+                           id="vendor_name" name="vendor_name" maxlength="100"
+                           value="{{ form_data.vendor_name }}" required>
+                    {% if errors.get('vendor_name') %}
+                    <div class="invalid-feedback">{{ errors.vendor_name }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="product_name" class="form-label">Product</label>
+                    <input type="text"
+                           class="form-control{% if errors.get('product_name') %} is-invalid{% endif %}"
+                           id="product_name" name="product_name" maxlength="200"
+                           value="{{ form_data.product_name }}" required>
+                    {% if errors.get('product_name') %}
+                    <div class="invalid-feedback">{{ errors.product_name }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="product_family" class="form-label">Product Family</label>
+                    <input type="text"
+                           class="form-control{% if errors.get('product_family') %} is-invalid{% endif %}"
+                           id="product_family" name="product_family" maxlength="100"
+                           value="{{ form_data.product_family }}">
+                    {% if errors.get('product_family') %}
+                    <div class="invalid-feedback">{{ errors.product_family }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="technology_category" class="form-label">
+                        Technology Category
+                    </label>
+                    <input type="text"
+                           class="form-control{% if errors.get('technology_category') %} is-invalid{% endif %}"
+                           id="technology_category" name="technology_category"
+                           maxlength="100" value="{{ form_data.technology_category }}">
+                    {% if errors.get('technology_category') %}
+                    <div class="invalid-feedback">
+                        {{ errors.technology_category }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description"
+                          rows="4">{{ form_data.description }}</textarea>
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="active"
+                       name="active" {% if form_data.active %}checked{% endif %}>
+                <label for="active" class="form-check-label">Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ url_for('product_catalog.product_list') }}"
+               class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
