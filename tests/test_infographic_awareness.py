@@ -49,6 +49,49 @@ class InfographicAwarenessContentTests(unittest.TestCase):
         self.assertTrue(all(isinstance(item, str) for item in content["actions"]))
         self.assertTrue(all(isinstance(item, str) for item in content["avoid"]))
 
+    def test_headlines_are_short_and_specific_to_the_threat(self):
+        cases = (
+            ({"Title": "Microsoft Edge security update"}, "Microsoft Edge Security Update"),
+            ({"Title": "Windows vulnerability", "CVE": "CVE-2026-1000"}, "Windows Security Update"),
+            ({"Title": "Critical vulnerability", "CVE": "CVE-2026-1001"}, "Critical Security Update"),
+            ({"Title": "Phishing campaign targeting employees"}, "Beware of Phishing"),
+            ({"Title": "Ransomware activity detected"}, "Ransomware Alert"),
+            ({"Title": "New malware delivery campaign"}, "Malware Detected"),
+            ({"Title": "General security notice"}, "Security Advisory"),
+        )
+
+        for threat, expected_headline in cases:
+            with self.subTest(expected_headline=expected_headline):
+                content = AwarenessGenerator.infographic_content(threat)
+                self.assertEqual(content["headline"], expected_headline)
+
+    def test_known_vendor_or_product_is_used_in_relevant_headline(self):
+        cases = (
+            ({"Title": "Chrome vulnerability", "CVE": "CVE-2026-2000"}, "Google Chrome Security Update"),
+            ({"Title": "Adobe patch advisory"}, "Adobe Security Update"),
+            ({"Title": "Cisco security notice"}, "Cisco Security Advisory"),
+            ({"Title": "ESXi security update"}, "VMware Security Update"),
+        )
+
+        for threat, expected_headline in cases:
+            with self.subTest(expected_headline=expected_headline):
+                content = AwarenessGenerator.infographic_content(threat)
+                self.assertEqual(content["headline"], expected_headline)
+
+    def test_incident_explanation_uses_natural_employee_language(self):
+        content = AwarenessGenerator.infographic_content(
+            {
+                "Title": "Microsoft Edge remote code execution vulnerability",
+                "CVE": "CVE-2026-3000",
+            }
+        )
+
+        self.assertIn("security weakness has been reported", content["what_happened"])
+        self.assertIn("Microsoft Edge", content["what_happened"])
+        self.assertIn("CVE-2026-3000", content["what_happened"])
+        for system_term in ("deployment", "remediation", "technical workarounds"):
+            self.assertNotIn(system_term, str(content).lower())
+
     def test_long_source_title_is_bounded_in_generated_copy(self):
         content = AwarenessGenerator.infographic_content(
             {"Title": "Security advisory " + ("with a very long title " * 20)}
@@ -102,6 +145,27 @@ class InfographicExporterTests(unittest.TestCase):
         self.assertTrue(
             all(InfographicExporter._text_width(draw, line, font) <= max_width for line in lines)
         )
+
+    def test_incident_explanation_is_limited_to_two_rendered_lines(self):
+        image = Image.new("RGB", (900, 300), "white")
+        draw = ImageDraw.Draw(image)
+        font = InfographicExporter._font(28)
+
+        with patch.object(
+            InfographicExporter,
+            "_ellipsize",
+            wraps=InfographicExporter._ellipsize,
+        ) as ellipsize:
+            InfographicExporter._draw_wrapped(
+                draw,
+                "A very long employee-facing incident explanation " * 20,
+                (0, 0, 600, 200),
+                font,
+                "black",
+                max_lines=2,
+            )
+
+        ellipsize.assert_called_once()
 
 
 class InfographicRouteTests(unittest.TestCase):

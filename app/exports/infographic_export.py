@@ -277,7 +277,7 @@ class InfographicExporter:
             cls._font(28),
             cls.TEXT,
             line_spacing=10,
-            max_lines=3,
+            max_lines=2,
         )
 
         cls._section(draw, margin, 680, "เหตุใดจึงสำคัญ", cls.RED)

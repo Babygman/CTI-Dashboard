@@ -3,41 +3,52 @@ from datetime import datetime
 
 class AwarenessGenerator:
 
+    _INFOGRAPHIC_SUBJECTS = (
+        (("microsoft edge", "edge"), "Microsoft Edge"),
+        (("windows",), "Windows"),
+        (("google chrome", "chrome"), "Google Chrome"),
+        (("adobe", "acrobat", "reader"), "Adobe"),
+        (("cisco",), "Cisco"),
+        (("vmware", "vcenter", "esxi"), "VMware"),
+        (("fortinet", "fortigate", "fortios"), "Fortinet"),
+        (("microsoft",), "Microsoft"),
+    )
+
     _INFOGRAPHIC_CONTENT = {
         "vulnerability": {
-            "headline": "Security Update Required",
-            "what_happened": "A software vulnerability has been reported{identifier}. IT is reviewing which systems may be affected.",
-            "why_it_matters": "Attackers may use the weakness to access information, disrupt work, or compromise a device.",
+            "headline": "Critical Security Update",
+            "what_happened": "A security weakness has been reported{identifier}. The alert concerns {subject}.",
+            "why_it_matters": "Attackers could use this weakness to access information, interrupt work, or take control of a device.",
             "actions": [
-                "Install company-approved updates when IT prompts you.",
-                "Restart your device after updates are installed.",
-                "Report unusual device behaviour to IT immediately.",
+                "Install the company-approved update when prompted.",
+                "Save your work and restart your device if asked.",
+                "Tell IT immediately if your device behaves unusually.",
             ],
             "avoid": [
-                "Do not postpone security updates without IT approval.",
-                "Do not install patches from emails or unofficial websites.",
-                "Do not attempt technical workarounds yourself.",
+                "Do not keep postponing an approved security update.",
+                "Do not download updates from emails or unofficial websites.",
+                "Do not try to fix the issue yourself.",
             ],
         },
         "patch_advisory": {
-            "headline": "Install the Approved Security Update",
-            "what_happened": "A security update has been released for {subject}. IT will coordinate deployment where required.",
-            "why_it_matters": "Applying the approved update helps close known security gaps before they can be exploited.",
+            "headline": "Critical Security Update",
+            "what_happened": "A security update is available for {subject}. You may be asked to update or restart your device.",
+            "why_it_matters": "Updating promptly helps prevent attackers from using a known security gap.",
             "actions": [
                 "Save your work when an update notification appears.",
-                "Allow the company update process to complete.",
-                "Restart your device if requested by IT.",
+                "Let the company-approved update finish.",
+                "Restart your device when IT asks you to.",
             ],
             "avoid": [
-                "Do not cancel or repeatedly defer approved updates.",
+                "Do not cancel or repeatedly postpone the update.",
                 "Do not download updates from pop-ups or email links.",
                 "Do not power off your device during installation.",
             ],
         },
         "phishing": {
-            "headline": "Think Before You Click",
-            "what_happened": "A phishing threat is using deceptive messages to trick people into clicking links, opening files, or sharing data.",
-            "why_it_matters": "One response can expose passwords, financial information, or company systems to an attacker.",
+            "headline": "Beware of Phishing",
+            "what_happened": "Fake messages are trying to trick people into clicking, opening files, or sharing information. The alert concerns {subject}.",
+            "why_it_matters": "One click or reply could expose passwords, company information, or access to company systems.",
             "actions": [
                 "Check the sender and message context carefully.",
                 "Use the approved reporting option for suspicious messages.",
@@ -50,8 +61,8 @@ class AwarenessGenerator:
             ],
         },
         "malware": {
-            "headline": "Stop Malware Before It Spreads",
-            "what_happened": "Malicious software may be distributed through unsafe files, links, websites, or unauthorized applications.",
+            "headline": "Malware Detected",
+            "what_happened": "Harmful software may be spreading through unsafe files, links, websites, or unapproved apps. The alert concerns {subject}.",
             "why_it_matters": "Malware can steal information, damage files, monitor activity, or spread to other company systems.",
             "actions": [
                 "Use only company-approved software and websites.",
@@ -65,8 +76,8 @@ class AwarenessGenerator:
             ],
         },
         "ransomware": {
-            "headline": "Protect Company Data from Ransomware",
-            "what_happened": "A ransomware threat may encrypt files or block access to systems and demand payment.",
+            "headline": "Ransomware Alert",
+            "what_happened": "Ransomware may lock files or block access to systems and demand payment. The alert concerns {subject}.",
             "why_it_matters": "Ransomware can stop business operations and put company or customer information at risk.",
             "actions": [
                 "Report suspicious messages and files immediately.",
@@ -80,9 +91,9 @@ class AwarenessGenerator:
             ],
         },
         "general_advisory": {
-            "headline": "Stay Alert to This Security Advisory",
-            "what_happened": "A security advisory has been issued for {subject}. IT is reviewing the information and any required response.",
-            "why_it_matters": "Following safe working practices helps protect company information and prevents avoidable disruption.",
+            "headline": "Security Advisory",
+            "what_happened": "A security alert has been issued for {subject}. Follow any instructions shared through an official company channel.",
+            "why_it_matters": "Staying alert helps protect company information and prevents avoidable disruption.",
             "actions": [
                 "Follow instructions sent through official company channels.",
                 "Keep company devices updated and protected.",
@@ -128,6 +139,36 @@ class AwarenessGenerator:
         return "general_advisory"
 
     @classmethod
+    def _infographic_subject_name(cls, threat):
+        details = " ".join(
+            cls._clean_text(threat.get(field)).lower()
+            for field in (
+                "VendorName",
+                "Vendor",
+                "Product",
+                "Title",
+                "Summary",
+                "Recommendation",
+                "Source",
+            )
+        )
+        for terms, display_name in cls._INFOGRAPHIC_SUBJECTS:
+            if any(term in details for term in terms):
+                return display_name
+        return None
+
+    @classmethod
+    def _infographic_headline(cls, threat, threat_type, default):
+        subject_name = cls._infographic_subject_name(threat)
+        if not subject_name:
+            return default
+        if threat_type in {"vulnerability", "patch_advisory"}:
+            return f"{subject_name} Security Update"
+        if threat_type == "general_advisory":
+            return f"{subject_name} Security Advisory"
+        return default
+
+    @classmethod
     def infographic_content(cls, threat):
         """Build concise employee-awareness copy for the PNG infographic."""
         threat_type = cls._infographic_threat_type(threat)
@@ -137,7 +178,9 @@ class AwarenessGenerator:
         identifier = f" ({cve})" if cve else ""
         return {
             "threat_type": threat_type,
-            "headline": content["headline"],
+            "headline": cls._infographic_headline(
+                threat, threat_type, content["headline"]
+            ),
             "what_happened": content["what_happened"].format(subject=subject, identifier=identifier),
             "why_it_matters": content["why_it_matters"],
             "actions": list(content["actions"]),
