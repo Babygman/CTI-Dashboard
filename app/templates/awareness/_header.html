@@ -1,0 +1,44 @@
+{% set severity_class = "severity-low" %}
+
+{% if threat.Severity == "Critical" %}
+    {% set severity_class = "severity-critical" %}
+{% elif threat.Severity == "High" %}
+    {% set severity_class = "severity-high" %}
+{% elif threat.Severity == "Medium" %}
+    {% set severity_class = "severity-medium" %}
+{% endif %}
+
+<div class="studio-header mb-4">
+
+    <div class="studio-label">
+        <i class="bi bi-stars"></i>
+        Security Awareness Studio
+    </div>
+
+    <div class="threat-title">
+        {{ threat.Title }}
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+
+        <span class="badge rounded-pill {{ severity_class }} px-3 py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            {{ threat.Severity }}
+        </span>
+
+        {% if threat.KEV %}
+        <span class="badge rounded-pill bg-danger px-3 py-2">
+            <i class="bi bi-lightning-charge-fill me-1"></i>
+            CISA KEV
+        </span>
+        {% endif %}
+
+        {% if threat.CVE %}
+        <span class="badge rounded-pill bg-light text-dark px-3 py-2">
+            {{ threat.CVE }}
+        </span>
+        {% endif %}
+
+    </div>
+
+</div>

@@ -1,0 +1,1 @@
+from app.settings.routes import settings_bp

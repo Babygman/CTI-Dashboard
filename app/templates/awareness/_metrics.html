@@ -1,0 +1,51 @@
+<div class="row g-3 mb-4">
+
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Severity</div>
+                <div class="metric-value">
+                    {{ threat.Severity }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">CVSS Score</div>
+                <div class="metric-value">
+                    {{ threat.CVSS if threat.CVSS else "N/A" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Source</div>
+                <div class="metric-value">
+                    {{ threat.Source if threat.Source else "N/A" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Published Date</div>
+                <div class="metric-value">
+                    {% if threat.PublishedDate %}
+                        {{ threat.PublishedDate.strftime("%d %b %Y") }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

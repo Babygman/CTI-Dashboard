@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+        <div>
+            <h2 class="mb-1">Settings</h2>
+            <p class="text-muted mb-0">
+                Manage company information, branding, and document defaults.
+            </p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Close">
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post">
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-building me-2"></i>
+                    Company Information
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-lg-8">
+                        <label for="CompanyName" class="form-label fw-semibold">
+                            Company Name
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="CompanyName"
+                               name="CompanyName"
+                               value="{{ settings.get('CompanyName', '') }}">
+                    </div>
+
+                    <div class="col-lg-4">
+                        <label for="CompanyShortName" class="form-label fw-semibold">
+                            Short Name
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="CompanyShortName"
+                               name="CompanyShortName"
+                               value="{{ settings.get('CompanyShortName', '') }}">
+                    </div>
+
+                    <div class="col-lg-6">
+                        <label for="Department" class="form-label fw-semibold">
+                            Department
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="Department"
+                               name="Department"
+                               value="{{ settings.get('Department', '') }}">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-palette me-2"></i>
+                    Branding
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-lg-6">
+                        <label for="CompanyLogo" class="form-label fw-semibold">
+                            Company Logo Path
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="CompanyLogo"
+                               name="CompanyLogo"
+                               value="{{ settings.get('CompanyLogo', '') }}"
+                               placeholder="/static/uploads/company-logo.png">
+                    </div>
+
+                    <div class="col-lg-6">
+                        <label for="Theme" class="form-label fw-semibold">
+                            Theme
+                        </label>
+                        <select class="form-select"
+                                id="Theme"
+                                name="Theme">
+                            <option value="Default"
+                                {% if settings.get('Theme') == 'Default' %}selected{% endif %}>
+                                Default
+                            </option>
+                            <option value="Corporate"
+                                {% if settings.get('Theme') == 'Corporate' %}selected{% endif %}>
+                                Corporate
+                            </option>
+                            <option value="Executive"
+                                {% if settings.get('Theme') == 'Executive' %}selected{% endif %}>
+                                Executive
+                            </option>
+                            <option value="Dark"
+                                {% if settings.get('Theme') == 'Dark' %}selected{% endif %}>
+                                Dark
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <label for="PrimaryColor" class="form-label fw-semibold">
+                            Primary Color
+                        </label>
+                        <input type="color"
+                               class="form-control form-control-color"
+                               id="PrimaryColor"
+                               name="PrimaryColor"
+                               value="{{ settings.get('PrimaryColor', '#0d6efd') }}">
+                    </div>
+
+                    <div class="col-lg-6">
+                        <label for="SecondaryColor" class="form-label fw-semibold">
+                            Secondary Color
+                        </label>
+                        <input type="color"
+                               class="form-control form-control-color"
+                               id="SecondaryColor"
+                               name="SecondaryColor"
+                               value="{{ settings.get('SecondaryColor', '#6c757d') }}">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Document Defaults
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-lg-4">
+                        <label for="Classification" class="form-label fw-semibold">
+                            Classification
+                        </label>
+                        <select class="form-select"
+                                id="Classification"
+                                name="Classification">
+                            <option value="Public"
+                                {% if settings.get('Classification') == 'Public' %}selected{% endif %}>
+                                Public
+                            </option>
+                            <option value="Internal Use"
+                                {% if settings.get('Classification') == 'Internal Use' %}selected{% endif %}>
+                                Internal Use
+                            </option>
+                            <option value="Confidential"
+                                {% if settings.get('Classification') == 'Confidential' %}selected{% endif %}>
+                                Confidential
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <label for="Language" class="form-label fw-semibold">
+                            Default Language
+                        </label>
+                        <select class="form-select"
+                                id="Language"
+                                name="Language">
+                            <option value="EN"
+                                {% if settings.get('Language') == 'EN' %}selected{% endif %}>
+                                English
+                            </option>
+                            <option value="TH"
+                                {% if settings.get('Language') == 'TH' %}selected{% endif %}>
+                                Thai
+                            </option>
+                            <option value="TH-EN"
+                                {% if settings.get('Language') == 'TH-EN' %}selected{% endif %}>
+                                Thai and English
+                            </option>
+                            <option value="JP"
+                                {% if settings.get('Language') == 'JP' %}selected{% endif %}>
+                                Japanese
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <label for="PaperSize" class="form-label fw-semibold">
+                            Paper Size
+                        </label>
+                        <select class="form-select"
+                                id="PaperSize"
+                                name="PaperSize">
+                            <option value="A4"
+                                {% if settings.get('PaperSize') == 'A4' %}selected{% endif %}>
+                                A4
+                            </option>
+                            <option value="Letter"
+                                {% if settings.get('PaperSize') == 'Letter' %}selected{% endif %}>
+                                Letter
+                            </option>
+                        </select>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button type="submit"
+                    class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-save me-2"></i>
+                Save Settings
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

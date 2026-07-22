@@ -1,0 +1,286 @@
+<div class="card content-card mb-4">
+
+    <div class="card-body p-4">
+
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4">
+
+            <div>
+
+                <h4 class="mb-1">
+                    <i class="bi bi-magic me-2 text-primary"></i>
+                    Awareness Package Generator
+                </h4>
+
+                <p class="text-muted mb-0">
+                    Generate communication and visual awareness content
+                    from the selected threat.
+                </p>
+
+            </div>
+
+            <span class="badge bg-success-subtle text-success mt-3 mt-lg-0 px-3 py-2">
+                <i class="bi bi-cpu-fill me-1"></i>
+                Content Package Engine
+            </span>
+
+        </div>
+
+        <div class="generator-panel p-4">
+
+            <div class="row g-4">
+
+                <div class="col-md-4">
+
+                    <label for="audience"
+                           class="form-label fw-semibold">
+                        Audience
+                    </label>
+
+                    <select class="form-select"
+                            id="audience"
+                            name="audience">
+
+                        <option value="executive">
+                            Executive Management
+                        </option>
+
+                        <option value="it">
+                            IT Team
+                        </option>
+
+                        <option value="employees">
+                            All Employees
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <label for="language"
+                           class="form-label fw-semibold">
+                        Language
+                    </label>
+
+                    <select class="form-select"
+                            id="language"
+                            name="language">
+
+                        <option value="en">
+                            English
+                        </option>
+
+                        <option value="th">
+                            Thai
+                        </option>
+
+                        <option value="th-en">
+                            Thai and English
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <label for="contentStyle"
+                           class="form-label fw-semibold">
+                        Content Style
+                    </label>
+
+                    <select class="form-select"
+                            id="contentStyle"
+                            name="content_style">
+
+                        <option value="professional">
+                            Professional
+                        </option>
+
+                        <option value="simple">
+                            Simple and Clear
+                        </option>
+
+                        <option value="urgent">
+                            Urgent Security Alert
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row g-3">
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputEmail"
+                                   checked>
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputEmail">
+
+                                <i class="bi bi-envelope-fill text-primary me-1"></i>
+                                Executive Email
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputWord"
+                                   checked>
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputWord">
+
+                                <i class="bi bi-file-earmark-word-fill text-primary me-1"></i>
+                                Word
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputPowerPoint"
+                                   checked>
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputPowerPoint">
+
+                                <i class="bi bi-file-earmark-slides-fill text-danger me-1"></i>
+                                PowerPoint
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputPdf">
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputPdf">
+
+                                <i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>
+                                PDF
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputInfographic"
+                                   checked>
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputInfographic">
+
+                                <i class="bi bi-image-fill text-success me-1"></i>
+                                Infographic
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-4 col-xl-2">
+
+                    <div class="output-option">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="outputTeams">
+
+                            <label class="form-check-label fw-semibold"
+                                   for="outputTeams">
+
+                                <i class="bi bi-microsoft-teams text-info me-1"></i>
+                                Teams Message
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+
+                <button type="button"
+                        class="btn btn-primary btn-lg px-4"
+                        onclick="generatePreview()">
+
+                    <i class="bi bi-stars me-2"></i>
+                    Generate Package
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

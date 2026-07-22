@@ -1,0 +1,79 @@
+<div class="row g-4 mb-4">
+
+    <div class="col-lg-6">
+
+        <div class="card content-card h-100">
+
+            <div class="card-body p-4">
+
+                <div class="d-flex align-items-center mb-3">
+
+                    <div class="section-icon bg-primary-subtle text-primary me-3">
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                    </div>
+
+                    <div>
+
+                        <h5 class="mb-0">
+                            Original Threat Summary
+                        </h5>
+
+                        <small class="text-muted">
+                            Source intelligence from the threat database
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <p class="text-secondary mb-0" style="line-height:1.8">
+
+                    {{ threat.Summary }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-6">
+
+        <div class="card content-card h-100">
+
+            <div class="card-body p-4">
+
+                <div class="d-flex align-items-center mb-3">
+
+                    <div class="section-icon bg-warning-subtle text-warning me-3">
+                        <i class="bi bi-tools"></i>
+                    </div>
+
+                    <div>
+
+                        <h5 class="mb-0">
+                            Source Recommendation
+                        </h5>
+
+                        <small class="text-muted">
+                            Vendor remediation guidance
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <p class="text-secondary mb-0" style="line-height:1.8">
+
+                    {{ threat.Recommendation }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
