@@ -1,7 +1,7 @@
 # CTI Dashboard Release Verification
 
-- Version: `v2.0.0-rc1` (candidate; tag withheld)
-- Commit: `PP1 - Optimize Relevant Threats performance`
+- Version: `v2.0.0-rc1`
+- Commit: `c25c0618e073c08990f5228928dd835cb79324d9` plus this release-verification record
 - Database Version: `20260724_00 (head)` on the configured production SQL Server
 - Test Result: `188 passed, 3 skipped, 240 warnings, 55 subtests passed`
 - Ready for Production: **YES**
@@ -15,10 +15,10 @@
 | Dashboard | PASS | Production-backed dashboard loaded successfully. |
 | Assets | PASS | Production asset `FG200E` loaded successfully. |
 | News | PASS | Page loaded successfully; production currently contains no news items. |
-| Relevant Threats | PASS | 7,092 production rows; 4.884-second cold request and 0.319-second warm request. Only the selected 25/50/100-row page is loaded and rendered. |
+| Relevant Threats | PASS | 7,092 production rows; definitive clean-process measurement was 4.971 seconds cold and 0.317 seconds warm. Pagination rendered exactly 25, 50, and 100 records while preserving the 323-record relevant total. |
 | Awareness | PASS WITH CONDITIONS | Awareness list and generation/edit screen loaded successfully. Production currently contains no saved awareness records. |
-| PDF | PASS | Valid one-page A4 PDF generated. SQL Server organization name, short name, and department were rendered. |
-| PNG | PASS | Valid `1240 x 1754` PNG generated. SQL Server organization name and department were rendered. |
+| PDF | PASS | Valid one-page A4 PDF generated and visually inspected. SQL Server organization name, short name, and department were rendered. |
+| PNG | PASS | Valid `1240 x 1754` PNG generated and visually inspected. SQL Server organization name and department were rendered. |
 | Placeholder text | PASS | The discovered `CVSS: None` export defect was fixed and regression-tested. Final PDF renders `ไม่ระบุ`. |
 | Config fallback precedence | PASS | Populated SQL Server values were used instead of config fallbacks. Fallbacks were used only for missing or blank database settings. |
 
@@ -63,13 +63,17 @@ Optimized cold profile:
 | Asset matching and recommendation | 5 ms |
 | Template rendering | 22 ms |
 
-Final HTTP measurements:
+Final release-verification HTTP measurements:
 
-- Cold request: 4.884 seconds (target: under 5 seconds)
-- Warm request: 0.319 seconds (target: under 2 seconds)
+- Cold request: 4.971 seconds (target: under 5 seconds)
+- Warm request: 0.317 seconds (target: under 2 seconds)
+- Page-size verification: 25, 50, and 100 rows rendered with the correct total of 323.
+- Filter verification: Need Awareness returned 284 total records and Need Patch returned 30, matching the previously verified SQL filter totals.
 - SQL filter totals matched the original Python business logic for all eight filters.
 - SQL Server denied `SHOWPLAN` permission. Existing index metadata was reviewed; no index was added because the remaining cold filter uses leading-wildcard searches over text/LOB columns, which a conventional nonclustered index cannot accelerate.
 
 ## Release Decision
 
-PP1 removes the Relevant Threats release blocker and meets both performance targets. The release candidate is ready for production verification.
+All required production, migration, functional, performance, pagination, branding, export, and visual checks passed. The final automated gates were `188 passed, 3 skipped`, Ruff clean, and 35 templates compiled successfully.
+
+PP1 removes the Relevant Threats release blocker and meets both performance targets. The release candidate is ready for production.
