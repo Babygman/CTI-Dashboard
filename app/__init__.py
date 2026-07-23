@@ -1,4 +1,6 @@
 from flask import Flask
+from datetime import datetime, timezone
+from sqlalchemy import event
 
 from config import Config
 
@@ -11,6 +13,19 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     db.init_app(app)
+
+    # Models intentionally use SQL Server's SYSUTCDATETIME server default.
+    # Register an equivalent function when running the supported local SQLite
+    # workflow so normal browser CRUD behaves the same way.
+    if str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("sqlite"):
+        with app.app_context():
+            @event.listens_for(db.engine, "connect")
+            def _register_sqlite_utc_timestamp(connection, _record):
+                connection.create_function(
+                    "SYSUTCDATETIME",
+                    0,
+                    lambda: datetime.now(timezone.utc).replace(tzinfo=None).isoformat(" "),
+                )
 
     from .assets import assets_blueprint
     from .actions import actions_blueprint

@@ -72,6 +72,8 @@ def test_asset_news_crud_and_relevant_filter():
         follow_redirects=True,
     )
     assert response.status_code == 200 and b"Need Patch" in response.data
+    assert b"Windows fleet" in response.data
+    assert b"Matched asset" in response.data
     with app.app_context():
         db.session.add_all([
             Threat(Title="Windows 11 vulnerability", Severity="High"),

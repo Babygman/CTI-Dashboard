@@ -5,6 +5,7 @@
 <dt class="col-sm-3">Thai Summary</dt><dd class="col-sm-9">{{ item.ThaiSummary or '-' }}</dd>
 <dt class="col-sm-3">Vendor / Product / CVE</dt><dd class="col-sm-9">{{ item.Vendor or '-' }} / {{ item.Product or '-' }} / {{ item.CVE or '-' }}</dd>
 <dt class="col-sm-3">Impact</dt><dd class="col-sm-9">{{ 'Relevant' if item.IsRelevant else 'Not Relevant' }} — {{ item.UserImpact or item.ITImpact or '-' }}</dd>
+<dt class="col-sm-3">Matched Assets</dt><dd class="col-sm-9">{% if matches %}{% for match in matches %}<div class="mb-2"><strong>{{ match.asset.AssetName }}</strong> <span class="badge bg-{{ 'danger' if match.status == 'Affected' else 'warning text-dark' }}">{{ match.status }}</span><div class="small text-muted">{{ match.reason }}</div></div>{% endfor %}{% else %}<span class="text-muted">No technical asset matched.</span>{% endif %}</dd>
 <dt class="col-sm-3">Recommendation</dt><dd class="col-sm-9"><strong>{{ item.RecommendationType or 'Needs Review' }}</strong> — {{ item.RecommendationReason or '-' }}</dd>
 </dl><form method="post" action="{{ url_for('news.relevance', news_id=item.NewsItemId) }}"><input type="hidden" name="is_relevant" value="{{ 'false' if item.IsRelevant else 'true' }}"><button class="btn btn-outline-secondary">Mark {{ 'Not Relevant' if item.IsRelevant else 'Relevant' }}</button></form></div>
 {% endblock %}

@@ -6,7 +6,7 @@ from flask import flash, redirect, render_template, request, url_for
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.news_item import NewsItem
-from app.services.relevance import news_relevance, recommend
+from app.services.relevance import assess_item, news_relevance, recommend
 
 from . import news_blueprint
 
@@ -114,7 +114,18 @@ def add():
 
 @news_blueprint.get("/<int:news_id>")
 def detail(news_id):
-    return render_template("news/detail.html", item=db.get_or_404(NewsItem, news_id))
+    item = db.get_or_404(NewsItem, news_id)
+    assets = db.session.execute(
+        db.select(Asset)
+        .where(Asset.Status == "Active")
+        .order_by(Asset.AssetName.asc())
+    ).scalars().all()
+    matches = []
+    for asset in assets:
+        status, reason = assess_item(item, asset)
+        if status != "Not Affected":
+            matches.append({"asset": asset, "status": status, "reason": reason})
+    return render_template("news/detail.html", item=item, matches=matches)
 
 
 @news_blueprint.route("/<int:news_id>/edit", methods=["GET", "POST"])

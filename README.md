@@ -16,6 +16,16 @@ Open `http://localhost:5000/`. The Version 2 migration is `20260724_00`; it
 adds columns and tables without deleting existing CISA, NVD, canonical threat,
 CVE, source, or asset data.
 
+On macOS/Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+alembic upgrade head
+python app.py
+```
+
 ## Test and lint
 
 ```powershell
@@ -48,3 +58,40 @@ An isolated automated version of steps 1–7 is also available:
 ```powershell
 .\.venv\Scripts\python scripts/manual_acceptance_v2.py
 ```
+
+## Perform the management demo
+
+Follow the timed script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md). Prepare
+one company asset and one matching News item first. The complete demonstrated
+flow is:
+
+1. Dashboard / My Environment
+2. My Assets
+3. News detail and matched asset
+4. Decision recommendation
+5. Generate Awareness
+6. Save & Preview
+7. Download PDF and PNG
+
+## Generate Awareness
+
+1. Open **News** or **Relevant Threats**.
+2. Open the source item and click **Generate Awareness**.
+3. Review and edit every field, especially the Thai explanation, affected
+   audience, action list, prohibited actions, and IT reporting channel.
+4. Change status from **Draft** to **Ready** only after review.
+5. Click **Save & Preview**.
+
+## Export PDF
+
+From the Awareness preview, click **Download PDF**. The application returns a
+corporate A4 PDF using the configured organization settings and logo.
+
+## Export PNG
+
+From the Awareness preview, click **Download PNG**. The application returns a
+1240×1754 corporate infographic suitable for email or Teams.
+
+Release evidence and results are recorded in
+[docs/UAT_CHECKLIST.md](docs/UAT_CHECKLIST.md). Remaining limitations are in
+[docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
