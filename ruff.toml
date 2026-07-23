@@ -1,0 +1,13 @@
+target-version = "py313"
+exclude = [
+    ".git",
+    ".pytest_cache",
+    ".venv",
+]
+
+[lint]
+# E712 is intentionally excluded because SQLAlchemy Boolean expressions use
+# explicit comparisons to produce the correct SQL Server predicates.
+# Package/blueprint __init__ imports intentionally register public objects and
+# routes, so F401/E402 are excluded from this existing codebase's CI baseline.
+ignore = ["E402", "E712", "F401"]

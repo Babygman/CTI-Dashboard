@@ -1,0 +1,215 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-checks:
+    name: Lint and template compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Compile Python
+        run: python -m compileall -q app migrations scripts tests
+
+      - name: Compile Jinja templates
+        run: python scripts/check_templates.py
+
+  unit-tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run test suite
+        run: pytest -q
+
+  migration-graph:
+    name: Alembic single-head gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Require exactly one Alembic head
+        run: python scripts/check_alembic.py
+
+      - name: Run migration compatibility tests
+        run: >
+          pytest -q
+          tests/test_alembic_baseline.py
+          tests/test_remediation_action_migration.py
+          tests/test_multi_cve_migration.py
+
+  sql-server:
+    name: SQL Server migration lifecycle
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: "CiSqlServerPassword2026!"
+        ports:
+          - 1433:1433
+    env:
+      SQLSERVER_PASSWORD: "CiSqlServerPassword2026!"
+      SQLALCHEMY_DATABASE_URI: >-
+        mssql+pyodbc://sa:CiSqlServerPassword2026!@localhost:1433/CTIDashboardCI?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes
+      SECRET_KEY: ci-only-secret-key
+      CTI_SQL_SERVER_INTEGRATION: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install Microsoft ODBC Driver 18
+        run: |
+          curl -sSL -o packages-microsoft-prod.deb \
+            https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Wait for SQL Server and create clean database
+        run: |
+          python - <<'PY'
+          import os
+          import time
+          import pyodbc
+
+          connection_string = (
+              "DRIVER={ODBC Driver 18 for SQL Server};"
+              "SERVER=localhost,1433;"
+              "DATABASE=master;"
+              "UID=sa;"
+              f"PWD={os.environ['SQLSERVER_PASSWORD']};"
+              "Encrypt=yes;"
+              "TrustServerCertificate=yes"
+          )
+          last_error = None
+          for _ in range(60):
+              try:
+                  connection = pyodbc.connect(
+                      connection_string, timeout=3, autocommit=True
+                  )
+                  connection.execute("CREATE DATABASE CTIDashboardCI")
+                  connection.close()
+                  print("SQL Server is ready.")
+                  break
+              except pyodbc.Error as exc:
+                  last_error = exc
+                  time.sleep(2)
+          else:
+              raise SystemExit(
+                  f"SQL Server did not become ready: {last_error}"
+              )
+          PY
+
+      - name: Require exactly one Alembic head
+        run: python scripts/check_alembic.py
+
+      - name: Alembic upgrade head
+        run: alembic upgrade head
+
+      - name: Verify SQL Server schema at head
+        run: python scripts/check_sql_server_schema.py
+
+      - name: Run SQL Server compatibility tests
+        run: >
+          pytest -q
+          tests/test_alembic_baseline.py
+          tests/test_remediation_action_migration.py
+          tests/test_multi_cve_migration.py
+          tests/test_sql_server_integration.py
+
+      - name: Alembic downgrade base
+        run: alembic downgrade base
+
+      - name: Verify downgrade removed application tables
+        run: |
+          python - <<'PY'
+          from sqlalchemy import create_engine, inspect
+          from config import Config
+
+          engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+          try:
+              tables = set(inspect(engine).get_table_names())
+              if tables != {"alembic_version"}:
+                  raise SystemExit(
+                      f"Unexpected tables after downgrade: {sorted(tables)}"
+                  )
+          finally:
+              engine.dispose()
+          print("Alembic downgrade base verified.")
+          PY
+
+      - name: Alembic upgrade head again
+        run: alembic upgrade head
+
+      - name: Verify recreated SQL Server schema
+        run: python scripts/check_sql_server_schema.py
