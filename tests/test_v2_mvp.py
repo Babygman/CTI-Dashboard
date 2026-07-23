@@ -85,6 +85,49 @@ def test_asset_news_crud_and_relevant_filter():
     assert b"Linux-only vulnerability" not in response.data
 
 
+def test_relevant_threats_paginates_and_preserves_filter_and_page_size():
+    app = app_with_schema()
+    client = app.test_client()
+    with app.app_context():
+        db.session.add(
+            Asset(
+                AssetName="Windows fleet",
+                Vendor="Microsoft",
+                Product="Windows 11",
+                Status="Active",
+            )
+        )
+        db.session.add_all(
+            [
+                Threat(
+                    Title=f"Windows 11 vulnerability {index:03d}",
+                    Severity="High",
+                    PublishedDate=datetime(2026, 7, 24),
+                )
+                for index in range(60)
+            ]
+        )
+        db.session.commit()
+
+    first_page = client.get("/relevant-threats?filter=patch")
+    assert first_page.status_code == 200
+    assert b"Total records: 60" in first_page.data
+    assert first_page.data.count(b"Generate Awareness") == 25
+    assert b"per_page=25" in first_page.data
+
+    second_page = client.get(
+        "/relevant-threats?filter=patch&page=2&per_page=25"
+    )
+    assert second_page.status_code == 200
+    assert second_page.data.count(b"Generate Awareness") == 25
+    assert b"filter=patch" in second_page.data
+
+    larger_page = client.get(
+        "/relevant-threats?filter=patch&page=1&per_page=50"
+    )
+    assert larger_page.data.count(b"Generate Awareness") == 50
+
+
 def test_awareness_edit_preview_pdf_and_png():
     app = app_with_schema()
     client = app.test_client()

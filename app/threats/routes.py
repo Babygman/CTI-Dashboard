@@ -1,10 +1,15 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from math import ceil
+from threading import Lock
+from time import monotonic
+from types import SimpleNamespace
 
 from flask import flash, redirect, render_template, request, url_for
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, literal, not_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import load_only
 from sqlalchemy.orm import selectinload
 
 from app.extensions import db
@@ -17,12 +22,22 @@ from app.models.threat_observation import ThreatObservation
 from app.services.cve_service import CVEPersistenceService, normalize_cve_code
 from app.services.threat_detail import ThreatDetailService
 from app.models.asset import Asset
-from app.services.relevance import assess_item, recommend
+from app.services.relevance import (
+    USER_THREATS,
+    _tokens,
+    assess_item,
+    normalize,
+    recommend,
+)
 
 from . import threats_blueprint
 
 
 SEVERITIES = ("Critical", "High", "Medium", "Low")
+RELEVANT_THREAT_PAGE_SIZES = (25, 50, 100)
+RELEVANT_THREAT_COUNT_CACHE_SECONDS = 30
+_relevant_threat_count_cache = {}
+_relevant_threat_count_cache_lock = Lock()
 
 
 def _get_vendors():
@@ -197,16 +212,88 @@ def relevant_threats():
     allowed = {"relevant", "all", "affected", "possibly", "awareness", "patch", "monitor", "ignored"}
     if selected not in allowed:
         selected = "relevant"
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = request.args.get("per_page", 25, type=int)
+    if per_page not in RELEVANT_THREAT_PAGE_SIZES:
+        per_page = 25
+
     assets = db.session.execute(
-        db.select(Asset).where(Asset.Status == "Active").order_by(Asset.AssetName)
+        db.select(Asset)
+        .options(
+            load_only(
+                Asset.AssetId,
+                Asset.AssetName,
+                Asset.Vendor,
+                Asset.Product,
+                Asset.Version,
+            )
+        )
+        .where(Asset.Status == "Active")
+        .order_by(Asset.AssetName)
     ).scalars().all()
-    threats = db.session.execute(
-        db.select(Threat).options(joinedload(Threat.vendor)).order_by(
+
+    filter_expression = _relevant_threat_filter(selected, assets)
+    total = _relevant_threat_count(
+        selected,
+        assets,
+        filter_expression,
+    )
+    pages = ceil(total / per_page) if total else 0
+    if pages and page > pages:
+        page = pages
+
+    primary_cve = (
+        db.select(CVE.CVECode)
+        .join(ThreatCVE, ThreatCVE.CVEId == CVE.CVEId)
+        .where(ThreatCVE.ThreatId == Threat.ThreatId)
+        .order_by(ThreatCVE.IsPrimary.desc(), ThreatCVE.CVEId.asc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    threat_rows = db.session.execute(
+        db.select(
+            Threat.ThreatId,
+            Threat.Title,
+            Threat.Source,
+            Threat.Severity,
+            Threat.CVE,
+            Threat.KEV,
+            Threat.PublishedDate,
+            Threat.ReferenceUrl,
+            Threat.Summary,
+            Threat.Recommendation,
+            Vendor.VendorName,
+            func.coalesce(primary_cve, Threat.CVE).label("PrimaryCVECode"),
+        )
+        .outerjoin(Vendor, Vendor.VendorId == Threat.VendorId)
+        .where(filter_expression)
+        .order_by(
             Threat.PublishedDate.desc(), Threat.ThreatId.desc()
         )
-    ).scalars().all()
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    ).all()
+
     rows = []
-    for threat in threats:
+    for result in threat_rows:
+        threat = SimpleNamespace(
+            ThreatId=result.ThreatId,
+            Title=result.Title,
+            Source=result.Source,
+            Severity=result.Severity,
+            CVE=result.CVE,
+            KEV=result.KEV,
+            PublishedDate=result.PublishedDate,
+            ReferenceUrl=result.ReferenceUrl,
+            Summary=result.Summary,
+            Recommendation=result.Recommendation,
+            primary_cve_code=result.PrimaryCVECode,
+            vendor=(
+                SimpleNamespace(VendorName=result.VendorName)
+                if result.VendorName
+                else None
+            ),
+        )
         matches = []
         for asset in assets:
             status, reason = assess_item(threat, asset)
@@ -232,7 +319,152 @@ def relevant_threats():
                 "threat": threat, "asset": asset, "status": status, "reason": reason,
                 "action": action, "action_reason": action_reason,
             })
-    return render_template("relevant_threats.html", rows=rows, selected=selected)
+    return render_template(
+        "relevant_threats.html",
+        rows=rows,
+        selected=selected,
+        page=page,
+        pages=pages,
+        per_page=per_page,
+        page_sizes=RELEVANT_THREAT_PAGE_SIZES,
+        total=total,
+    )
+
+
+def _relevant_threat_filter(selected, assets):
+    searchable_fields = (
+        Threat.Title,
+        Threat.Summary,
+        Threat.Recommendation,
+        Threat.Source,
+    )
+
+    def contains(value):
+        normalized = " ".join(
+            token
+            for token in normalize(value).split()
+            if token
+        )
+        return (
+            or_(
+                *(
+                    func.coalesce(field, "").contains(
+                        normalized,
+                        autoescape=True,
+                    )
+                    for field in searchable_fields
+                )
+            )
+            if normalized
+            else literal(False)
+        )
+
+    user_targeted = or_(*(contains(term) for term in USER_THREATS))
+    asset_matches = []
+    affected_matches = []
+    possibly_matches = []
+
+    for asset in assets:
+        vendor_match = contains(asset.Vendor)
+        product_tokens = _tokens(asset.Product or asset.AssetName)
+        product_match = (
+            and_(*(contains(token) for token in product_tokens))
+            if product_tokens
+            else literal(False)
+        )
+        version_value = normalize(asset.Version)
+        version_match = contains(version_value)
+
+        asset_matches.append(or_(vendor_match, product_match))
+        affected_matches.append(
+            and_(
+                product_match,
+                or_(not_(literal(bool(version_value))), version_match),
+            )
+        )
+        possibly_matches.append(
+            or_(
+                and_(product_match, literal(bool(version_value)), not_(version_match)),
+                and_(not_(product_match), vendor_match),
+            )
+        )
+
+    matched = or_(*asset_matches) if asset_matches else literal(False)
+    affected = or_(*affected_matches) if affected_matches else literal(False)
+    possibly = or_(*possibly_matches) if possibly_matches else literal(False)
+    high_priority = or_(
+        Threat.KEV == True,  # noqa: E712 - SQLAlchemy compiles this as "= 1" for MSSQL.
+        func.lower(func.coalesce(Threat.Severity, "")).in_(("critical", "high")),
+    )
+    configuration_guidance = or_(
+        contains("configuration"),
+        contains("mitigation"),
+        contains("workaround"),
+    )
+    patch = and_(not_(user_targeted), matched, high_priority)
+    monitor = and_(
+        not_(user_targeted),
+        matched,
+        not_(high_priority),
+        not_(configuration_guidance),
+    )
+
+    return {
+        "all": literal(True),
+        "relevant": or_(matched, user_targeted),
+        "affected": affected,
+        "possibly": possibly,
+        "awareness": user_targeted,
+        "patch": patch,
+        "monitor": monitor,
+        "ignored": and_(not_(user_targeted), not_(matched)),
+    }[selected]
+
+
+def _relevant_threat_count(selected, assets, filter_expression):
+    asset_key = tuple(
+        (
+            asset.AssetId,
+            asset.AssetName,
+            asset.Vendor,
+            asset.Product,
+            asset.Version,
+        )
+        for asset in assets
+    )
+    cache_key = (id(db.engine), selected, asset_key)
+    now = monotonic()
+
+    with _relevant_threat_count_cache_lock:
+        expired_keys = [
+            key
+            for key, value in _relevant_threat_count_cache.items()
+            if now - value["created_at"]
+            >= RELEVANT_THREAT_COUNT_CACHE_SECONDS
+        ]
+        for key in expired_keys:
+            _relevant_threat_count_cache.pop(key, None)
+        cached = _relevant_threat_count_cache.get(cache_key)
+        if (
+            cached
+            and now - cached["created_at"]
+            < RELEVANT_THREAT_COUNT_CACHE_SECONDS
+        ):
+            return cached["total"]
+
+    total = db.session.scalar(
+        db.select(func.count())
+        .select_from(Threat)
+        .where(filter_expression)
+    ) or 0
+
+    with _relevant_threat_count_cache_lock:
+        _relevant_threat_count_cache[cache_key] = {
+            "created_at": now,
+            "total": total,
+        }
+
+    return total
 
 
 @threats_blueprint.get("/threats/<int:threat_id>")
