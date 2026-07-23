@@ -40,6 +40,8 @@
                         {{ sortable_header('Version', 'version') }}
                         <th>Catalog Product</th>
                         {{ sortable_header('Type', 'asset_type') }}
+                        <th>Qty</th>
+                        <th>Department</th>
                         {{ sortable_header('Environment', 'environment') }}
                         {{ sortable_header('Owner', 'owner') }}
                         {{ sortable_header('Critical', 'critical') }}
@@ -61,6 +63,8 @@
                             {% endif %}
                         </td>
                         <td>{{ asset.AssetType or '' }}</td>
+                        <td>{{ asset.Quantity or 1 }}</td>
+                        <td>{{ asset.Department or '' }}</td>
                         <td>{{ asset.Environment or '' }}</td>
                         <td>{{ asset.Owner or '' }}</td>
                         <td>{{ 'Yes' if asset.Critical else 'No' }}</td>
@@ -78,7 +82,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="11" class="text-center text-muted">No assets found.</td>
+                        <td colspan="13" class="text-center text-muted">No assets found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

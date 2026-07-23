@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<h2>{{ page_title }}</h2><form method="post" class="card card-body shadow-sm">
+{% macro field(name,label,required=false,type='text') %}<div class="mb-3"><label class="form-label" for="{{ name }}">{{ label }}</label><input class="form-control{% if errors.get(name) %} is-invalid{% endif %}" type="{{ type }}" id="{{ name }}" name="{{ name }}" value="{{ form[name] }}" {% if required %}required{% endif %}>{% if errors.get(name) %}<div class="invalid-feedback">{{ errors[name] }}</div>{% endif %}</div>{% endmacro %}
+<div class="row"><div class="col-md-8">{{ field('title','Title',true) }}</div><div class="col-md-4">{{ field('published_date','Published Date',false,'date') }}</div>
+<div class="col-md-4">{{ field('source','Source',true) }}</div><div class="col-md-8">{{ field('reference_url','Original URL',true,'url') }}</div>
+<div class="col-md-4">{{ field('vendor','Vendor') }}</div><div class="col-md-4">{{ field('product','Product') }}</div><div class="col-md-4">{{ field('cve','CVE') }}</div>
+<div class="col-md-6 mb-3"><label class="form-label">Severity</label><select name="severity" class="form-select"><option value="">Unspecified</option>{% for x in severities %}<option {% if form.severity==x %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></div>
+<div class="col-md-6 mb-3"><label class="form-label">Threat Type</label><select name="threat_type" class="form-select"><option value="">Other</option>{% for x in threat_types %}<option {% if form.threat_type==x %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></div></div>
+{% for name,label in [('summary','Summary'),('thai_summary','Thai Summary'),('user_impact','User Impact'),('it_impact','IT Impact'),('recommendation_reason','Recommendation Reason')] %}<div class="mb-3"><label class="form-label">{{ label }}</label><textarea name="{{ name }}" class="form-control" rows="3">{{ form[name] }}</textarea></div>{% endfor %}
+{{ field('recommendation_type','Recommendation (Need Patch / Need Awareness / Need Monitor / Need Configuration Change / Ignore)') }}
+<div><button class="btn btn-primary">Save</button> <a class="btn btn-secondary" href="{{ url_for('news.index') }}">Cancel</a></div></form>{% endblock %}

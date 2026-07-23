@@ -18,6 +18,8 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from app.models.system_setting import SystemSetting
 
@@ -27,6 +29,27 @@ class PDFExporter:
 
     DEFAULT_PRIMARY_COLOR = "0D6EFD"
     DEFAULT_SECONDARY_COLOR = "6C757D"
+    FONT = "Helvetica"
+    FONT_BOLD = "Helvetica-Bold"
+
+    @classmethod
+    def _ensure_thai_fonts(cls):
+        candidates = (
+            (r"C:\Windows\Fonts\tahoma.ttf", r"C:\Windows\Fonts\tahomabd.ttf"),
+            ("/System/Library/Fonts/Supplemental/Tahoma.ttf",
+             "/System/Library/Fonts/Supplemental/Tahoma Bold.ttf"),
+            ("/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf",
+             "/usr/share/fonts/truetype/noto/NotoSansThai-Bold.ttf"),
+        )
+        for regular, bold in candidates:
+            if Path(regular).is_file() and Path(bold).is_file():
+                try:
+                    pdfmetrics.registerFont(TTFont("CTIThai", regular))
+                    pdfmetrics.registerFont(TTFont("CTIThai-Bold", bold))
+                    cls.FONT, cls.FONT_BOLD = "CTIThai", "CTIThai-Bold"
+                    return
+                except Exception:
+                    continue
 
     @staticmethod
     def generate(
@@ -35,6 +58,7 @@ class PDFExporter:
         business_impact,
         it_recommendation,
     ):
+        PDFExporter._ensure_thai_fonts()
         settings = PDFExporter._load_settings()
 
         company_name = settings.get("CompanyName", "Company Name")
@@ -218,7 +242,7 @@ class PDFExporter:
             "title": ParagraphStyle(
                 "CTITitle",
                 parent=base["Title"],
-                fontName="Helvetica-Bold",
+                fontName=PDFExporter.FONT_BOLD,
                 fontSize=22,
                 leading=26,
                 alignment=TA_CENTER,
@@ -228,7 +252,7 @@ class PDFExporter:
             "subtitle": ParagraphStyle(
                 "CTISubtitle",
                 parent=base["Normal"],
-                fontName="Helvetica-Bold",
+                fontName=PDFExporter.FONT_BOLD,
                 fontSize=11,
                 leading=14,
                 alignment=TA_CENTER,
@@ -237,7 +261,7 @@ class PDFExporter:
             "heading": ParagraphStyle(
                 "CTIHeading",
                 parent=base["Heading2"],
-                fontName="Helvetica-Bold",
+                fontName=PDFExporter.FONT_BOLD,
                 fontSize=13,
                 leading=16,
                 textColor=primary_color,
@@ -247,7 +271,7 @@ class PDFExporter:
             "body": ParagraphStyle(
                 "CTIBody",
                 parent=base["BodyText"],
-                fontName="Helvetica",
+                fontName=PDFExporter.FONT,
                 fontSize=10,
                 leading=14,
                 alignment=TA_LEFT,
@@ -256,7 +280,7 @@ class PDFExporter:
             "bullet": ParagraphStyle(
                 "CTIBullet",
                 parent=base["BodyText"],
-                fontName="Helvetica",
+                fontName=PDFExporter.FONT,
                 fontSize=10,
                 leading=14,
                 leftIndent=14,
@@ -266,21 +290,21 @@ class PDFExporter:
             "table_label": ParagraphStyle(
                 "CTITableLabel",
                 parent=base["BodyText"],
-                fontName="Helvetica-Bold",
+                fontName=PDFExporter.FONT_BOLD,
                 fontSize=9,
                 leading=12,
             ),
             "table_value": ParagraphStyle(
                 "CTITableValue",
                 parent=base["BodyText"],
-                fontName="Helvetica",
+                fontName=PDFExporter.FONT,
                 fontSize=9,
                 leading=12,
             ),
             "source": ParagraphStyle(
                 "CTISource",
                 parent=base["BodyText"],
-                fontName="Helvetica",
+                fontName=PDFExporter.FONT,
                 fontSize=9,
                 leading=12,
                 textColor=primary_color,
@@ -289,7 +313,7 @@ class PDFExporter:
             "generated": ParagraphStyle(
                 "CTIGenerated",
                 parent=base["BodyText"],
-                fontName="Helvetica-Oblique",
+                fontName=PDFExporter.FONT,
                 fontSize=8,
                 leading=10,
                 alignment=TA_RIGHT,
@@ -299,7 +323,7 @@ class PDFExporter:
             "banner": ParagraphStyle(
                 "CTIBanner",
                 parent=base["BodyText"],
-                fontName="Helvetica-Bold",
+                fontName=PDFExporter.FONT_BOLD,
                 fontSize=9,
                 leading=12,
                 alignment=TA_CENTER,

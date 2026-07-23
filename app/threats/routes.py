@@ -16,6 +16,8 @@ from app.models.threat_cve import ThreatCVE
 from app.models.threat_observation import ThreatObservation
 from app.services.cve_service import CVEPersistenceService, normalize_cve_code
 from app.services.threat_detail import ThreatDetailService
+from app.models.asset import Asset
+from app.services.relevance import assess_item, recommend
 
 from . import threats_blueprint
 
@@ -154,6 +156,7 @@ def threat_list():
             ThreatObservation.source
         ),
     )
+
     if query:
         pattern = f"%{query}%"
         statement = statement.where(
@@ -186,6 +189,50 @@ def threat_list():
         selected_vendor_id=vendor_id,
         selected_severity=severity,
     )
+
+
+@threats_blueprint.get("/relevant-threats")
+def relevant_threats():
+    selected = request.args.get("filter", "relevant")
+    allowed = {"relevant", "all", "affected", "possibly", "awareness", "patch", "monitor", "ignored"}
+    if selected not in allowed:
+        selected = "relevant"
+    assets = db.session.execute(
+        db.select(Asset).where(Asset.Status == "Active").order_by(Asset.AssetName)
+    ).scalars().all()
+    threats = db.session.execute(
+        db.select(Threat).options(joinedload(Threat.vendor)).order_by(
+            Threat.PublishedDate.desc(), Threat.ThreatId.desc()
+        )
+    ).scalars().all()
+    rows = []
+    for threat in threats:
+        matches = []
+        for asset in assets:
+            status, reason = assess_item(threat, asset)
+            if status != "Not Affected":
+                action, action_reason = recommend(threat, status)
+                matches.append((asset, status, reason, action, action_reason))
+        if matches:
+            rank = {"Affected": 0, "Possibly Affected": 1, "Needs Review": 2}
+            asset, status, reason, action, action_reason = sorted(
+                matches, key=lambda x: rank.get(x[1], 9)
+            )[0]
+        else:
+            action, action_reason = recommend(threat, "Not Affected")
+            asset, status, reason = None, "Not Affected", "No company asset matched."
+        include = {
+            "all": True, "relevant": bool(matches) or action == "Need Awareness",
+            "affected": status == "Affected", "possibly": status == "Possibly Affected",
+            "awareness": action == "Need Awareness", "patch": action == "Need Patch",
+            "monitor": action == "Need Monitor", "ignored": action == "Ignore",
+        }[selected]
+        if include:
+            rows.append({
+                "threat": threat, "asset": asset, "status": status, "reason": reason,
+                "action": action, "action_reason": action_reason,
+            })
+    return render_template("relevant_threats.html", rows=rows, selected=selected)
 
 
 @threats_blueprint.get("/threats/<int:threat_id>")

@@ -11,6 +11,9 @@ from .threat import Threat
 from .threat_cve import ThreatCVE
 from .threat_observation import ThreatObservation
 from .vendor import Vendor
+from .news_item import NewsItem
+from .threat_assessment import ThreatAssessment
+from .awareness_record import AwarenessRecord
 
 
 __all__ = [
@@ -27,4 +30,7 @@ __all__ = [
     "ThreatCVE",
     "ThreatObservation",
     "Vendor",
+    "NewsItem",
+    "ThreatAssessment",
+    "AwarenessRecord",
 ]

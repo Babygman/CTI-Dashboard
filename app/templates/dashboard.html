@@ -54,7 +54,17 @@
 
 {% block content %}
 
-<h2 class="mb-4">Security Operations</h2>
+<h2 class="mb-4">My Environment</h2>
+<p class="text-muted">What currently affects company assets and what needs action.</p>
+<h3 class="visually-hidden">Security Operations</h3>
+<div class="row row-cols-1 row-cols-md-4 g-3 mb-4">
+  <div class="col"><a class="card card-body shadow-sm text-decoration-none border-danger" href="{{ url_for('threats.relevant_threats',filter='affected') }}"><h5>Affected Assets</h5><h1>{{ operations.summary.patch_immediately + operations.summary.patch_this_week + operations.summary.review_and_schedule }}</h1></a></div>
+  <div class="col"><a class="card card-body shadow-sm text-decoration-none border-warning" href="{{ url_for('threats.relevant_threats',filter='patch') }}"><h5>Need Patch</h5><h1>{{ operations.summary.patch_immediately + operations.summary.patch_this_week }}</h1></a></div>
+  <div class="col"><a class="card card-body shadow-sm text-decoration-none border-primary" href="{{ url_for('threats.relevant_threats',filter='awareness') }}"><h5>Need Awareness</h5><h1>{{ operations.summary.notify_users }}</h1></a></div>
+  <div class="col"><a class="card card-body shadow-sm text-decoration-none" href="{{ url_for('threats.relevant_threats',filter='monitor') }}"><h5>Need Monitor</h5><h1>{{ operations.summary.monitor }}</h1></a></div>
+</div>
+<div class="card shadow-sm mb-4"><div class="card-header d-flex justify-content-between"><span>Recent Relevant News</span><a href="{{ url_for('news.index',relevance='relevant') }}">View all</a></div><div class="list-group list-group-flush">
+{% for item in recent_relevant_news %}<a class="list-group-item list-group-item-action" href="{{ url_for('news.detail',news_id=item.NewsItemId) }}"><strong>{{ item.Title }}</strong><span class="badge bg-secondary float-end">{{ item.RecommendationType or 'Needs Review' }}</span><div class="small text-muted">{{ item.Source }}</div></a>{% else %}<div class="list-group-item text-muted">No relevant news yet.</div>{% endfor %}</div></div>
 
 <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">

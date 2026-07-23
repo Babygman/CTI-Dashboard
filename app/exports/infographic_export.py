@@ -40,6 +40,17 @@ class InfographicExporter:
                 r"C:\Windows\Fonts\arial.ttf",
             ]
         )
+        candidates = list(candidates)
+        if bold:
+            candidates.extend([
+                "/System/Library/Fonts/Supplemental/Tahoma Bold.ttf",
+                "/usr/share/fonts/truetype/noto/NotoSansThai-Bold.ttf",
+            ])
+        else:
+            candidates.extend([
+                "/System/Library/Fonts/Supplemental/Tahoma.ttf",
+                "/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf",
+            ])
         for path in candidates:
             try:
                 return ImageFont.truetype(path, size)

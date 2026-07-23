@@ -10,6 +10,7 @@ from app.models.threat_observation import ThreatObservation
 from app.models.vendor import Vendor
 from app.services.operations_dashboard import OperationsDashboardService
 from app.repositories import RemediationActionRepository
+from app.models.news_item import NewsItem
 
 from . import dashboard_blueprint
 
@@ -112,6 +113,12 @@ def dashboard():
     open_remediation_actions = (
         RemediationActionRepository.list_open()
     )
+    recent_relevant_news = db.session.execute(
+        db.select(NewsItem)
+        .where(NewsItem.IsRelevant == True)
+        .order_by(NewsItem.PublishedDate.desc(), NewsItem.NewsItemId.desc())
+        .limit(5)
+    ).scalars().all()
 
     return render_template(
         "dashboard.html",
@@ -135,4 +142,5 @@ def dashboard():
         vendor_labels=[vendor for vendor, _ in vendor_rows],
         vendor_values=[count for _, count in vendor_rows],
         open_remediation_actions=open_remediation_actions,
+        recent_relevant_news=recent_relevant_news,
     )

@@ -24,6 +24,7 @@ def create_app(config_class=Config):
     from .awareness import awareness_bp
     from .settings import settings_bp
     from .sources import sources_blueprint
+    from .news import news_blueprint
 
     app.register_blueprint(assets_blueprint)
     app.register_blueprint(actions_blueprint)
@@ -37,6 +38,7 @@ def create_app(config_class=Config):
     app.register_blueprint(awareness_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(sources_blueprint)
+    app.register_blueprint(news_blueprint)
 
     from .collectors.commands import collector_cli
     from .services.asset_import_commands import import_assets_command

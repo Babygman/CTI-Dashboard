@@ -55,6 +55,8 @@ def create_test_app():
                 Product VARCHAR(200),
                 Version VARCHAR(100),
                 AssetType VARCHAR(100),
+                Quantity INTEGER NOT NULL DEFAULT 1,
+                Department VARCHAR(200),
                 Critical BOOLEAN NOT NULL DEFAULT 0,
                 Environment VARCHAR(100),
                 Owner VARCHAR(200),

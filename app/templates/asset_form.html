@@ -20,12 +20,25 @@
 
                 <div class="col-md-6 mb-3">
                     <label for="asset_type" class="form-label">Asset Type</label>
-                    <input type="text" class="form-control{% if errors.get('asset_type') %} is-invalid{% endif %}"
-                           id="asset_type" name="asset_type" maxlength="100"
-                           value="{{ form_data.asset_type }}">
+                    <select class="form-select" id="asset_type" name="asset_type">
+                        <option value="">Select type</option>
+                        <option value="Hardware" {% if form_data.asset_type == 'Hardware' %}selected{% endif %}>Hardware</option>
+                        <option value="Software" {% if form_data.asset_type == 'Software' %}selected{% endif %}>Software</option>
+                    </select>
                     {% if errors.get('asset_type') %}
                     <div class="invalid-feedback">{{ errors.asset_type }}</div>
                     {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="quantity" class="form-label">Quantity / Device Count</label>
+                    <input type="number" min="1" class="form-control{% if errors.get('quantity') %} is-invalid{% endif %}"
+                           id="quantity" name="quantity" value="{{ form_data.quantity }}" required>
+                    {% if errors.get('quantity') %}<div class="invalid-feedback">{{ errors.quantity }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="department" class="form-label">Business Unit / Department</label>
+                    <input class="form-control" id="department" name="department" maxlength="200"
+                           value="{{ form_data.department }}">
                 </div>
 
                 <div class="col-md-6 mb-3">

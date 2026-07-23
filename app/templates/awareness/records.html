@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}<h2>Awareness</h2>
+<div class="card shadow-sm"><table class="table mb-0"><thead><tr><th>Title</th><th>Source item</th><th>Status</th><th>Version</th><th></th></tr></thead><tbody>
+{% for x in records %}<tr><td>{{ x.Title }}</td><td>{{ x.news_item.Title if x.news_item else (x.threat.Title if x.threat else '-') }}</td><td><span class="badge bg-{{ 'success' if x.Status=='Ready' else 'secondary' }}">{{ x.Status }}</span></td><td>{{ x.DocumentVersion }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('awareness.preview_record',record_id=x.AwarenessRecordId) }}">Preview</a> <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('awareness.edit_record',record_id=x.AwarenessRecordId) }}">Edit</a></td></tr>
+{% else %}<tr><td colspan="5" class="text-center text-muted p-4">No awareness records yet. Generate one from News or Relevant Threats.</td></tr>{% endfor %}</tbody></table></div>{% endblock %}

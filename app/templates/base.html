@@ -56,81 +56,84 @@
 
                     <i class="bi bi-speedometer2 me-2"></i>
 
-                    Dashboard
-
-                </a>
-
-                <a href="{{ url_for('threats.threat_list') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-shield-exclamation me-2"></i>
-
-                    Threat Feed
-
-                </a>
-
-                <a href="{{ url_for('cves.cve_list') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-bug me-2"></i>
-
-                    CVEs
-
-                </a>
-
-                <a href="{{ url_for('awareness.index') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-megaphone me-2"></i>
-
-                    Awareness
-
-                </a>
-
-                <a href="{{ url_for('vendors.vendor_list') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-building me-2"></i>
-
-                    Vendors
+                    Dashboard / My Environment
 
                 </a>
 
                 <a href="{{ url_for('assets.asset_list') }}"
                    class="list-group-item list-group-item-action">
 
+                    <i class="bi bi-shield-exclamation me-2"></i>
+
+                    My Assets
+
+                </a>
+
+                <a href="{{ url_for('threats.relevant_threats') }}"
+                   class="list-group-item list-group-item-action">
+
+                    <i class="bi bi-bug me-2"></i>
+
+                    Relevant Threats
+
+                </a>
+
+                <a href="{{ url_for('news.index') }}"
+                   class="list-group-item list-group-item-action">
+
+                    <i class="bi bi-megaphone me-2"></i>
+
+                    News
+
+                </a>
+
+                <a href="{{ url_for('awareness.records') }}"
+                   class="list-group-item list-group-item-action">
+
+                    <i class="bi bi-building me-2"></i>
+
+                    Awareness
+
+                </a>
+
+                <hr class="border-secondary"><div class="small text-secondary px-3 mb-2">ADMINISTRATION</div>
+                <a href="{{ url_for('threats.threat_list') }}"
+                   class="list-group-item list-group-item-action">
+
                     <i class="bi bi-pc-display-horizontal me-2"></i>
 
-                    Assets
+                    All Threats
+
+                </a>
+
+                <a href="{{ url_for('cves.cve_list') }}"
+                   class="list-group-item list-group-item-action">
+
+                    <i class="bi bi-box-seam me-2"></i>
+
+                    CVEs
+
+                </a>
+
+                <a href="{{ url_for('vendors.vendor_list') }}"
+                   class="list-group-item list-group-item-action">
+
+                    <i class="bi bi-broadcast-pin me-2"></i>
+
+                    Vendors
 
                 </a>
 
                 <a href="{{ url_for('product_catalog.product_list') }}"
                    class="list-group-item list-group-item-action">
 
-                    <i class="bi bi-box-seam me-2"></i>
+                    <i class="bi bi-list-check me-2"></i>
 
                     Product Catalog
 
                 </a>
-
-                <a href="{{ url_for('sources.source_list') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-broadcast-pin me-2"></i>
-
-                    Sources
-
-                </a>
-
-                <a href="{{ url_for('actions.action_list') }}"
-                   class="list-group-item list-group-item-action">
-
-                    <i class="bi bi-list-check me-2"></i>
-
-                    Remediation Actions
-
-                </a>
+                <a href="{{ url_for('sources.source_list') }}" class="list-group-item list-group-item-action"><i class="bi bi-broadcast-pin me-2"></i>Sources</a>
+                <a href="{{ url_for('actions.action_list') }}" class="list-group-item list-group-item-action"><i class="bi bi-list-check me-2"></i>Remediation Actions</a>
 
                 <a href="{{ url_for('settings.index') }}"
                    class="list-group-item list-group-item-action">

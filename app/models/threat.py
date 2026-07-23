@@ -49,6 +49,12 @@ class Threat(db.Model):
         cascade="all, delete-orphan",
         order_by="ThreatObservation.ObservedDate.asc()",
     )
+    assessments = db.relationship(
+        "ThreatAssessment", back_populates="threat", cascade="all, delete-orphan"
+    )
+    awareness_records = db.relationship(
+        "AwarenessRecord", back_populates="threat", passive_deletes="all"
+    )
 
     @property
     def primary_cve(self):

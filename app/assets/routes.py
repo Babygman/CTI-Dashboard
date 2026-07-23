@@ -16,6 +16,7 @@ FIELD_LIMITS = {
     "product": 200,
     "version": 100,
     "asset_type": 100,
+    "department": 200,
     "environment": 100,
     "owner": 200,
     "location": 255,
@@ -43,6 +44,8 @@ def _form_data_from_request():
             "catalog_product_id", ""
         ).strip(),
         "asset_type": request.form.get("asset_type", "").strip(),
+        "quantity": request.form.get("quantity", "1").strip(),
+        "department": request.form.get("department", "").strip(),
         "critical": "critical" in request.form,
         "environment": request.form.get("environment", "").strip(),
         "owner": request.form.get("owner", "").strip(),
@@ -56,6 +59,12 @@ def _validate_form(form_data):
     errors = {}
     if not form_data["asset_name"]:
         errors["asset_name"] = "Asset Name is required."
+    try:
+        quantity = int(form_data["quantity"])
+        if quantity < 1:
+            raise ValueError
+    except ValueError:
+        errors["quantity"] = "Quantity must be a whole number of at least 1."
 
     labels = {
         "asset_name": "Asset Name",
@@ -94,6 +103,8 @@ def _apply_form_data(asset, form_data):
         else None
     )
     asset.AssetType = form_data["asset_type"] or None
+    asset.Quantity = int(form_data["quantity"])
+    asset.Department = form_data["department"] or None
     asset.Critical = form_data["critical"]
     asset.Environment = form_data["environment"] or None
     asset.Owner = form_data["owner"] or None
@@ -168,6 +179,8 @@ def add_asset():
         "version": "",
         "catalog_product_id": "",
         "asset_type": "",
+        "quantity": "1",
+        "department": "",
         "critical": False,
         "environment": "",
         "owner": "",
@@ -220,6 +233,8 @@ def edit_asset(asset_id):
                 str(asset.CatalogProductId) if asset.CatalogProductId else ""
             ),
             "asset_type": asset.AssetType or "",
+            "quantity": str(asset.Quantity or 1),
+            "department": asset.Department or "",
             "critical": bool(asset.Critical),
             "environment": asset.Environment or "",
             "owner": asset.Owner or "",

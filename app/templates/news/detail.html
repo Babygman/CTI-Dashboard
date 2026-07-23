@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block content %}
+<div class="d-flex justify-content-between"><h2>{{ item.Title }}</h2><div><a class="btn btn-primary" href="{{ url_for('awareness.create_from_news', news_id=item.NewsItemId) }}">Generate Awareness</a> <a class="btn btn-outline-secondary" href="{{ url_for('news.edit', news_id=item.NewsItemId) }}">Edit</a></div></div>
+<div class="card card-body shadow-sm mt-3"><dl class="row">
+<dt class="col-sm-3">Source</dt><dd class="col-sm-9"><a href="{{ item.ReferenceUrl }}" target="_blank" rel="noopener">{{ item.Source }} — original reference</a></dd>
+<dt class="col-sm-3">Thai Summary</dt><dd class="col-sm-9">{{ item.ThaiSummary or '-' }}</dd>
+<dt class="col-sm-3">Vendor / Product / CVE</dt><dd class="col-sm-9">{{ item.Vendor or '-' }} / {{ item.Product or '-' }} / {{ item.CVE or '-' }}</dd>
+<dt class="col-sm-3">Impact</dt><dd class="col-sm-9">{{ 'Relevant' if item.IsRelevant else 'Not Relevant' }} — {{ item.UserImpact or item.ITImpact or '-' }}</dd>
+<dt class="col-sm-3">Recommendation</dt><dd class="col-sm-9"><strong>{{ item.RecommendationType or 'Needs Review' }}</strong> — {{ item.RecommendationReason or '-' }}</dd>
+</dl><form method="post" action="{{ url_for('news.relevance', news_id=item.NewsItemId) }}"><input type="hidden" name="is_relevant" value="{{ 'false' if item.IsRelevant else 'true' }}"><button class="btn btn-outline-secondary">Mark {{ 'Not Relevant' if item.IsRelevant else 'Relevant' }}</button></form></div>
+{% endblock %}

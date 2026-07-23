@@ -2,7 +2,9 @@
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# Explicit process/service environment variables must take precedence over
+# developer .env defaults (also makes isolated migration verification safe).
+load_dotenv(override=False)
 
 
 def _positive_int(name, default):
