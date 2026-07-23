@@ -1,11 +1,16 @@
 from datetime import datetime
 from urllib.parse import urlparse
 
+from math import ceil
+from types import SimpleNamespace
+
 from flask import flash, redirect, render_template, request, url_for
+from sqlalchemy import func, literal, not_
 
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.news_item import NewsItem
+from app.models.threat import Threat
 from app.services.relevance import assess_item, news_relevance, recommend
 
 from . import news_blueprint
@@ -84,15 +89,120 @@ def _apply(item, form, published):
 @news_blueprint.get("/")
 def index():
     relevance = request.args.get("relevance", "")
-    statement = db.select(NewsItem)
-    if relevance == "relevant":
-        statement = statement.where(NewsItem.IsRelevant == True)
-    elif relevance == "not-relevant":
-        statement = statement.where(NewsItem.IsRelevant == False)
-    items = db.session.execute(
-        statement.order_by(NewsItem.PublishedDate.desc(), NewsItem.NewsItemId.desc())
+    if relevance not in {"relevant", "not-relevant"}:
+        relevance = ""
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 25
+
+    assets = db.session.execute(
+        db.select(Asset).where(Asset.Status == "Active")
     ).scalars().all()
-    return render_template("news/index.html", items=items, relevance=relevance)
+    from app.threats.routes import _relevant_threat_expressions
+
+    expressions = _relevant_threat_expressions(assets)
+    manual_news = db.select(
+        literal("news").label("RecordType"),
+        NewsItem.NewsItemId.label("RecordId"),
+        NewsItem.Title,
+        NewsItem.Source,
+        NewsItem.PublishedDate,
+        NewsItem.ThreatType,
+        NewsItem.Severity,
+        NewsItem.IsRelevant,
+        NewsItem.RecommendationType,
+        NewsItem.ReferenceUrl,
+        NewsItem.Summary,
+        NewsItem.RecommendationReason.label("RawRecommendation"),
+        literal(False).label("KEV"),
+    )
+    collected_threats = db.select(
+        literal("threat").label("RecordType"),
+        Threat.ThreatId.label("RecordId"),
+        Threat.Title,
+        Threat.Source,
+        Threat.PublishedDate,
+        literal("Vulnerability").label("ThreatType"),
+        Threat.Severity,
+        literal(None).label("IsRelevant"),
+        literal(None).label("RecommendationType"),
+        Threat.ReferenceUrl,
+        Threat.Summary,
+        Threat.Recommendation.label("RawRecommendation"),
+        Threat.KEV,
+    )
+    if relevance == "relevant":
+        manual_news = manual_news.where(NewsItem.IsRelevant == True)
+        collected_threats = collected_threats.where(
+            expressions["relevant"]
+        )
+    elif relevance == "not-relevant":
+        manual_news = manual_news.where(NewsItem.IsRelevant == False)
+        collected_threats = collected_threats.where(
+            not_(expressions["relevant"])
+        )
+    feed = manual_news.union_all(collected_threats).subquery()
+    statement = db.select(feed)
+    total = db.session.scalar(
+        db.select(func.count()).select_from(statement.subquery())
+    ) or 0
+    pages = ceil(total / per_page) if total else 0
+    if pages and page > pages:
+        page = pages
+    feed_rows = db.session.execute(
+        statement.order_by(
+            feed.c.PublishedDate.desc(),
+            feed.c.RecordType.asc(),
+            feed.c.RecordId.desc(),
+        )
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    ).all()
+    items = []
+    for row in feed_rows:
+        if row.RecordType == "news":
+            items.append(row)
+            continue
+        threat = SimpleNamespace(
+            Title=row.Title,
+            Summary=row.Summary,
+            Recommendation=row.RawRecommendation,
+            Source=row.Source,
+            Severity=row.Severity,
+            KEV=row.KEV,
+        )
+        matches = [
+            status
+            for asset in assets
+            for status, _ in [assess_item(threat, asset)]
+            if status != "Not Affected"
+        ]
+        if matches:
+            rank = {
+                "Affected": 0,
+                "Possibly Affected": 1,
+                "Needs Review": 2,
+            }
+            status = sorted(
+                matches,
+                key=lambda value: rank.get(value, 9),
+            )[0]
+        else:
+            status = "Not Affected"
+        recommendation_type, _ = recommend(threat, status)
+        row_values = dict(row._mapping)
+        row_values["IsRelevant"] = bool(matches) or (
+            recommendation_type == "Need Awareness"
+        )
+        row_values["RecommendationType"] = recommendation_type
+        items.append(SimpleNamespace(**row_values))
+    return render_template(
+        "news/index.html",
+        items=items,
+        relevance=relevance,
+        page=page,
+        pages=pages,
+        total=total,
+    )
 
 
 @news_blueprint.route("/add", methods=["GET", "POST"])

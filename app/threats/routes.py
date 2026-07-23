@@ -35,6 +35,18 @@ from . import threats_blueprint
 
 SEVERITIES = ("Critical", "High", "Medium", "Low")
 RELEVANT_THREAT_PAGE_SIZES = (25, 50, 100)
+RELEVANT_THREAT_RECOMMENDATIONS = (
+    "Need Awareness",
+    "Need Patch",
+    "Need Configuration Change",
+    "Need Monitor",
+    "Ignore",
+)
+RELEVANT_THREAT_IMPACTS = (
+    "Affected",
+    "Possibly Affected",
+    "Not Affected",
+)
 RELEVANT_THREAT_COUNT_CACHE_SECONDS = 30
 _relevant_threat_count_cache = {}
 _relevant_threat_count_cache_lock = Lock()
@@ -216,6 +228,18 @@ def relevant_threats():
     per_page = request.args.get("per_page", 25, type=int)
     if per_page not in RELEVANT_THREAT_PAGE_SIZES:
         per_page = 25
+    query = request.args.get("q", "").strip()
+    vendor_id = request.args.get("vendor_id", type=int)
+    severity = request.args.get("severity", "").strip()
+    if severity not in SEVERITIES:
+        severity = ""
+    recommendation = request.args.get("recommendation", "").strip()
+    if recommendation not in RELEVANT_THREAT_RECOMMENDATIONS:
+        recommendation = ""
+    impact = request.args.get("impact", "").strip()
+    if impact not in RELEVANT_THREAT_IMPACTS:
+        impact = ""
+    asset_id = request.args.get("asset_id", type=int)
 
     assets = db.session.execute(
         db.select(Asset)
@@ -232,11 +256,79 @@ def relevant_threats():
         .order_by(Asset.AssetName)
     ).scalars().all()
 
-    filter_expression = _relevant_threat_filter(selected, assets)
+    expressions = _relevant_threat_expressions(assets)
+    filter_expression = expressions[selected]
+    active_asset = next(
+        (asset for asset in assets if asset.AssetId == asset_id),
+        None,
+    )
+    if asset_id is not None and active_asset is None:
+        asset_id = None
+    scoped_expressions = (
+        _relevant_threat_expressions([active_asset])
+        if active_asset is not None
+        else expressions
+    )
+
+    if query:
+        pattern = f"%{query}%"
+        filter_expression = and_(
+            filter_expression,
+            or_(
+                Threat.Title.ilike(pattern),
+                Threat.CVE.ilike(pattern),
+                Threat.Source.ilike(pattern),
+                Threat.Summary.ilike(pattern),
+                Threat.Recommendation.ilike(pattern),
+                Vendor.VendorName.ilike(pattern),
+                Threat.cve_links.any(
+                    ThreatCVE.cve.has(CVE.CVECode.ilike(pattern))
+                ),
+            ),
+        )
+    if vendor_id is not None:
+        filter_expression = and_(
+            filter_expression,
+            Threat.VendorId == vendor_id,
+        )
+    if severity:
+        filter_expression = and_(
+            filter_expression,
+            Threat.Severity == severity,
+        )
+    if recommendation:
+        filter_expression = and_(
+            filter_expression,
+            scoped_expressions["recommendations"][recommendation],
+        )
+    if impact:
+        filter_expression = and_(
+            filter_expression,
+            scoped_expressions["impacts"][impact],
+        )
+    if active_asset is not None:
+        filter_expression = and_(
+            filter_expression,
+            _asset_match_expression(active_asset),
+        )
+
+    filter_query = {
+        key: value
+        for key, value in {
+            "q": query,
+            "vendor_id": vendor_id,
+            "severity": severity,
+            "recommendation": recommendation,
+            "impact": impact,
+            "asset_id": asset_id,
+        }.items()
+        if value not in ("", None)
+    }
     total = _relevant_threat_count(
         selected,
         assets,
         filter_expression,
+        tuple(sorted(filter_query.items())),
     )
     pages = ceil(total / per_page) if total else 0
     if pages and page > pages:
@@ -275,6 +367,7 @@ def relevant_threats():
     ).all()
 
     rows = []
+    assessment_assets = [active_asset] if active_asset is not None else assets
     for result in threat_rows:
         threat = SimpleNamespace(
             ThreatId=result.ThreatId,
@@ -295,7 +388,7 @@ def relevant_threats():
             ),
         )
         matches = []
-        for asset in assets:
+        for asset in assessment_assets:
             status, reason = assess_item(threat, asset)
             if status != "Not Affected":
                 action, action_reason = recommend(threat, status)
@@ -328,52 +421,81 @@ def relevant_threats():
         per_page=per_page,
         page_sizes=RELEVANT_THREAT_PAGE_SIZES,
         total=total,
+        q=query,
+        vendors=_get_vendors(),
+        selected_vendor_id=vendor_id,
+        severity_options=SEVERITIES,
+        selected_severity=severity,
+        recommendation_options=RELEVANT_THREAT_RECOMMENDATIONS,
+        selected_recommendation=recommendation,
+        impact_options=RELEVANT_THREAT_IMPACTS,
+        selected_impact=impact,
+        assets=assets,
+        selected_asset_id=asset_id,
+        filter_query=filter_query,
     )
 
 
-def _relevant_threat_filter(selected, assets):
+def _contains_threat_text(value):
     searchable_fields = (
         Threat.Title,
         Threat.Summary,
         Threat.Recommendation,
         Threat.Source,
     )
-
-    def contains(value):
-        normalized = " ".join(
-            token
-            for token in normalize(value).split()
-            if token
-        )
-        return (
-            or_(
-                *(
-                    func.coalesce(field, "").contains(
-                        normalized,
-                        autoescape=True,
-                    )
-                    for field in searchable_fields
+    normalized = " ".join(
+        token
+        for token in normalize(value).split()
+        if token
+    )
+    return (
+        or_(
+            *(
+                func.coalesce(field, "").contains(
+                    normalized,
+                    autoescape=True,
                 )
+                for field in searchable_fields
             )
-            if normalized
-            else literal(False)
         )
+        if normalized
+        else literal(False)
+    )
 
-    user_targeted = or_(*(contains(term) for term in USER_THREATS))
+
+def _asset_match_parts(asset):
+    vendor_match = _contains_threat_text(asset.Vendor)
+    product_tokens = _tokens(asset.Product or asset.AssetName)
+    product_match = (
+        and_(*(_contains_threat_text(token) for token in product_tokens))
+        if product_tokens
+        else literal(False)
+    )
+    version_value = normalize(asset.Version)
+    version_match = _contains_threat_text(version_value)
+    return vendor_match, product_match, version_value, version_match
+
+
+def _asset_match_expression(asset):
+    vendor_match, product_match, _, _ = _asset_match_parts(asset)
+    return or_(vendor_match, product_match)
+
+
+def _relevant_threat_expressions(assets):
+    user_targeted = or_(
+        *(_contains_threat_text(term) for term in USER_THREATS)
+    )
     asset_matches = []
     affected_matches = []
     possibly_matches = []
 
     for asset in assets:
-        vendor_match = contains(asset.Vendor)
-        product_tokens = _tokens(asset.Product or asset.AssetName)
-        product_match = (
-            and_(*(contains(token) for token in product_tokens))
-            if product_tokens
-            else literal(False)
-        )
-        version_value = normalize(asset.Version)
-        version_match = contains(version_value)
+        (
+            vendor_match,
+            product_match,
+            version_value,
+            version_match,
+        ) = _asset_match_parts(asset)
 
         asset_matches.append(or_(vendor_match, product_match))
         affected_matches.append(
@@ -397,19 +519,28 @@ def _relevant_threat_filter(selected, assets):
         func.lower(func.coalesce(Threat.Severity, "")).in_(("critical", "high")),
     )
     configuration_guidance = or_(
-        contains("configuration"),
-        contains("mitigation"),
-        contains("workaround"),
+        _contains_threat_text("configuration"),
+        _contains_threat_text("mitigation"),
+        _contains_threat_text("workaround"),
     )
     patch = and_(not_(user_targeted), matched, high_priority)
+    configuration = and_(
+        not_(user_targeted),
+        matched,
+        not_(high_priority),
+        configuration_guidance,
+    )
     monitor = and_(
         not_(user_targeted),
         matched,
         not_(high_priority),
         not_(configuration_guidance),
     )
+    ignored = and_(not_(user_targeted), not_(matched))
+    not_affected = not_(matched)
+    exact_possibly = and_(not_(affected), possibly)
 
-    return {
+    filters = {
         "all": literal(True),
         "relevant": or_(matched, user_targeted),
         "affected": affected,
@@ -417,11 +548,33 @@ def _relevant_threat_filter(selected, assets):
         "awareness": user_targeted,
         "patch": patch,
         "monitor": monitor,
-        "ignored": and_(not_(user_targeted), not_(matched)),
-    }[selected]
+        "ignored": ignored,
+    }
+    filters["recommendations"] = {
+        "Need Awareness": user_targeted,
+        "Need Patch": patch,
+        "Need Configuration Change": configuration,
+        "Need Monitor": monitor,
+        "Ignore": ignored,
+    }
+    filters["impacts"] = {
+        "Affected": affected,
+        "Possibly Affected": exact_possibly,
+        "Not Affected": not_affected,
+    }
+    return filters
 
 
-def _relevant_threat_count(selected, assets, filter_expression):
+def _relevant_threat_filter(selected, assets):
+    return _relevant_threat_expressions(assets)[selected]
+
+
+def _relevant_threat_count(
+    selected,
+    assets,
+    filter_expression,
+    filter_scope=(),
+):
     asset_key = tuple(
         (
             asset.AssetId,
@@ -432,7 +585,7 @@ def _relevant_threat_count(selected, assets, filter_expression):
         )
         for asset in assets
     )
-    cache_key = (id(db.engine), selected, asset_key)
+    cache_key = (id(db.engine), selected, asset_key, filter_scope)
     now = monotonic()
 
     with _relevant_threat_count_cache_lock:
@@ -455,6 +608,7 @@ def _relevant_threat_count(selected, assets, filter_expression):
     total = db.session.scalar(
         db.select(func.count())
         .select_from(Threat)
+        .outerjoin(Vendor, Vendor.VendorId == Threat.VendorId)
         .where(filter_expression)
     ) or 0
 

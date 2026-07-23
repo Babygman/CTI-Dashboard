@@ -3,7 +3,7 @@
 - Version: `v2.0.0-rc1`
 - Commit: `c25c0618e073c08990f5228928dd835cb79324d9` plus this release-verification record
 - Database Version: `20260724_00 (head)` on the configured production SQL Server
-- Test Result: `188 passed, 3 skipped, 240 warnings, 55 subtests passed`
+- Test Result: `190 passed, 3 skipped, 300 warnings, 55 subtests passed`
 - Ready for Production: **YES**
 
 ## Verification Result
@@ -77,3 +77,48 @@ Final release-verification HTTP measurements:
 All required production, migration, functional, performance, pagination, branding, export, and visual checks passed. The final automated gates were `188 passed, 3 skipped`, Ruff clean, and 35 templates compiled successfully.
 
 PP1 removes the Relevant Threats release blocker and meets both performance targets. The release candidate is ready for production.
+
+## News and Relevant Threats Priority Fix
+
+### News root cause
+
+The automated CISA and NVD collectors persist canonical cybersecurity records in the `Threats` table. The News route queried only `NewsItems`, a separate table populated by the manual Add News workflow. Production contained 7,092 collected threats and no manual News records, so All Threats was populated while News correctly returned an empty `NewsItems` result.
+
+### Fix summary
+
+- News now presents one paginated feed containing manual `NewsItems` and collected `Threats`.
+- All, Relevant, and Not Relevant tabs remain available and filter both record types.
+- Collected records link to Threat details and the existing threat-based Awareness generator; manual records retain their News detail and Awareness workflows.
+- SQL performs filtering, total count, ordering, and 25-row pagination. Existing matching and recommendation logic evaluates only the current page.
+- The empty state now appears only when the active News view has no matching manual or collected records.
+- Relevant Threats now supports SQL-backed search plus vendor, severity, recommendation, impact-status, and matched-asset filters.
+- Search covers title, direct and normalized CVE, vendor, product terms present in threat text, source, summary, and recommendation text.
+- Tabs, 25/50/100 page sizes, pagination, and active filter values are preserved in generated links.
+
+### Production-sized verification
+
+Dataset at verification time:
+
+- Threats: 7,092
+- Active assets: 2
+- News All: 7,092 records; 25 rendered; 1.596 seconds
+- News Relevant: 426 records; 25 rendered; 4.726 seconds cold
+
+Relevant Threats filter samples:
+
+| Filter | Total | Response time |
+| --- | ---: | ---: |
+| Search `Fortinet` | 41 | 1.846 seconds |
+| Search `FortiGate` | 2 | 1.726 seconds |
+| Severity `Critical` | 2,224 | 0.399 seconds |
+| Recommendation `Need Patch` | 131 | 7.493 seconds cold / 3.176 seconds warm |
+| Matched asset `FG200E` | 41 | 2.742 seconds |
+| Fortinet + High + Need Patch + FG200E | 4 | 3.871 seconds |
+
+Pagination links retained search, severity, recommendation, matched asset, selected tab, and 25/50/100 page size parameters. The existing tab predicates and deterministic asset-matching/recommendation functions were reused without changing business rules.
+
+Final verification:
+
+- Pytest: `190 passed, 3 skipped, 300 warnings, 55 subtests passed`
+- Ruff: passed
+- Template check: 35 templates compiled successfully

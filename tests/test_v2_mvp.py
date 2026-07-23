@@ -9,6 +9,7 @@ from app.models.asset import Asset
 from app.models.awareness_record import AwarenessRecord
 from app.models.news_item import NewsItem
 from app.models.threat import Threat
+from app.models.vendor import Vendor
 from app.services.relevance import assess_item, news_relevance, recommend
 
 
@@ -85,6 +86,49 @@ def test_asset_news_crud_and_relevant_filter():
     assert b"Linux-only vulnerability" not in response.data
 
 
+def test_news_lists_collected_threats_and_preserves_relevance_tabs():
+    app = app_with_schema()
+    client = app.test_client()
+    empty = client.get("/news/")
+    assert b"No news or threat records match this view." in empty.data
+    with app.app_context():
+        db.session.add_all(
+            [
+                Threat(
+                    Title="Credential phishing campaign",
+                    Source="NVD",
+                    Severity="High",
+                    CVE="CVE-2026-1000",
+                ),
+                Threat(
+                    Title="Linux kernel maintenance advisory",
+                    Source="NVD",
+                    Severity="Low",
+                    CVE="CVE-2026-1001",
+                ),
+            ]
+        )
+        db.session.commit()
+
+    all_news = client.get("/news/")
+    assert all_news.status_code == 200
+    assert b"Total records: 2" in all_news.data
+    assert b"Credential phishing campaign" in all_news.data
+    assert b"Linux kernel maintenance advisory" in all_news.data
+    assert b"/threats/" in all_news.data
+    assert b"/awareness/create/threat/" in all_news.data
+
+    relevant = client.get("/news/?relevance=relevant")
+    assert b"Total records: 1" in relevant.data
+    assert b"Credential phishing campaign" in relevant.data
+    assert b"Linux kernel maintenance advisory" not in relevant.data
+
+    not_relevant = client.get("/news/?relevance=not-relevant")
+    assert b"Total records: 1" in not_relevant.data
+    assert b"Linux kernel maintenance advisory" in not_relevant.data
+    assert b"Credential phishing campaign" not in not_relevant.data
+
+
 def test_relevant_threats_paginates_and_preserves_filter_and_page_size():
     app = app_with_schema()
     client = app.test_client()
@@ -126,6 +170,83 @@ def test_relevant_threats_paginates_and_preserves_filter_and_page_size():
         "/relevant-threats?filter=patch&page=1&per_page=50"
     )
     assert larger_page.data.count(b"Generate Awareness") == 50
+
+
+def test_relevant_threats_search_filters_and_pagination_preserve_query():
+    app = app_with_schema()
+    client = app.test_client()
+    with app.app_context():
+        vendor = Vendor(VendorName="Fortinet")
+        asset = Asset(
+            AssetName="Branch Firewall",
+            Vendor="Fortinet",
+            Product="FortiGate",
+            Status="Active",
+        )
+        db.session.add_all([vendor, asset])
+        db.session.flush()
+        db.session.add_all(
+            [
+                Threat(
+                    Title=f"FortiGate security update {index:03d}",
+                    VendorId=vendor.VendorId,
+                    Source="Fortinet PSIRT",
+                    Summary="Fortinet firewall vulnerability",
+                    CVE=f"CVE-2026-{2000 + index}",
+                    Severity="High",
+                )
+                for index in range(55)
+            ]
+            + [
+                Threat(
+                    Title="Unrelated Linux advisory",
+                    Source="NVD",
+                    Severity="Low",
+                )
+            ]
+        )
+        db.session.commit()
+        vendor_id = vendor.VendorId
+        asset_id = asset.AssetId
+
+    filtered = client.get(
+        "/relevant-threats",
+        query_string={
+            "filter": "all",
+            "q": "FortiGate",
+            "vendor_id": vendor_id,
+            "severity": "High",
+            "recommendation": "Need Patch",
+            "impact": "Affected",
+            "asset_id": asset_id,
+            "page": 2,
+            "per_page": 25,
+        },
+    )
+    assert filtered.status_code == 200
+    assert b"Total records: 55" in filtered.data
+    assert filtered.data.count(b"Generate Awareness") == 25
+    for expected in (
+        b"q=FortiGate",
+        b"severity=High",
+        b"recommendation=Need+Patch",
+        b"impact=Affected",
+        f"vendor_id={vendor_id}".encode(),
+        f"asset_id={asset_id}".encode(),
+        b"per_page=50",
+        b"per_page=100",
+    ):
+        assert expected in filtered.data
+
+    cve_search = client.get(
+        "/relevant-threats",
+        query_string={"filter": "all", "q": "CVE-2026-2001"},
+    )
+    assert b"Total records: 1" in cve_search.data
+    assert b"FortiGate security update 001" in cve_search.data
+
+    reset = client.get("/relevant-threats?filter=all")
+    assert b"Total records: 56" in reset.data
 
 
 def test_awareness_edit_preview_pdf_and_png():
