@@ -19,6 +19,20 @@ class InfographicTestConfig:
 
 
 class InfographicAwarenessContentTests(unittest.TestCase):
+    def test_executive_summary_does_not_render_none_for_missing_cvss(self):
+        summary = AwarenessGenerator.executive_summary(
+            {
+                "Title": "Security advisory",
+                "Severity": "High",
+                "CVE": "CVE-2026-1000",
+                "CVSS": None,
+                "Source": "Vendor",
+            }
+        )
+
+        self.assertIn("CVSS : ไม่ระบุ", summary)
+        self.assertNotIn("None", summary)
+
     def test_supported_threat_types_are_classified(self):
         cases = (
             ({"Title": "Remote vulnerability", "CVE": "CVE-2026-1000"}, "vulnerability"),

@@ -205,7 +205,7 @@ class AwarenessGenerator:
         )
         title = threat.get("Title", "")
         cve = threat.get("CVE", "")
-        cvss = threat.get("CVSS")
+        cvss = threat.get("CVSS") or "ไม่ระบุ"
         source = threat.get("Source", "")
 
         summary = (
