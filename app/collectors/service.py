@@ -13,6 +13,7 @@ from app.models.source import Source
 from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.vendor import Vendor
+from app.services.cve_service import CVEPersistenceService
 
 from .base import BaseCollector
 from .deduplication import (
@@ -268,6 +269,12 @@ def _process_item(
 
     if existing_external is not None:
         if existing_external.ContentHash == hash_value:
+            if existing_external.threat is not None:
+                CVEPersistenceService.sync_threat(
+                    existing_external.threat,
+                    item.cve_ids,
+                    source=item.source_name,
+                )
             _update_source_item(
                 existing_external,
                 collection_run_id,
@@ -288,6 +295,9 @@ def _process_item(
         vendor = _vendor_for_item(item, threat)
         _apply_threat_values(threat, item, vendor, is_new=is_new)
         db.session.flush()
+        CVEPersistenceService.sync_threat(
+            threat, item.cve_ids, source=item.source_name
+        )
         existing_external.ThreatId = threat.ThreatId
         _update_source_item(
             existing_external,
@@ -301,6 +311,11 @@ def _process_item(
 
     duplicate_source_item = source_item_by_content_hash(hash_value)
     if duplicate_source_item is not None:
+        CVEPersistenceService.sync_threat(
+            duplicate_source_item.threat,
+            item.cve_ids,
+            source=item.source_name,
+        )
         db.session.add(
             _new_source_item(
                 source,
@@ -321,6 +336,9 @@ def _process_item(
             duplicate_threat, item, vendor, is_new=False
         )
         db.session.flush()
+        CVEPersistenceService.sync_threat(
+            duplicate_threat, item.cve_ids, source=item.source_name
+        )
         db.session.add(
             _new_source_item(
                 source,
@@ -339,6 +357,9 @@ def _process_item(
     _apply_threat_values(threat, item, vendor, is_new=True)
     db.session.add(threat)
     db.session.flush()
+    CVEPersistenceService.sync_threat(
+        threat, item.cve_ids, source=item.source_name
+    )
     db.session.add(
         _new_source_item(
             source,

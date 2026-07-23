@@ -1,11 +1,14 @@
-﻿import logging
+﻿import json
+import logging
 from itertools import islice
+from time import perf_counter
 
-from flask import current_app
-from sqlalchemy.orm import joinedload
+from flask import current_app, has_app_context
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import db
 from app.models.threat import Threat
+from app.models.threat_cve import ThreatCVE
 
 from .decision_engine import DecisionEngine
 from .impact_analysis import ImpactAnalysisService
@@ -30,16 +33,51 @@ class OperationsDashboardService:
         self.decision_engine = decision_engine or DecisionEngine()
 
     def analyze(self, threats=None, limit=None):
+        profiling_enabled = (
+            has_app_context() and current_app.debug
+        )
+        total_started = perf_counter() if profiling_enabled else None
+        timings = self._empty_timings() if profiling_enabled else None
+
         analysis_limit = self._analysis_limit(limit)
+        retrieval_started = perf_counter() if profiling_enabled else None
         if threats is None:
             selected_threats = self._recent_threats(analysis_limit)
         else:
             selected_threats = list(islice(threats, analysis_limit))
+        if profiling_enabled:
+            timings["threat_retrieval_ms"] += self._elapsed_ms(
+                retrieval_started
+            )
 
         result = self._empty_result()
+        # Preload catalog products, aliases, and assets once. Every threat in
+        # this dashboard batch is then normalized and matched in memory.
+        preload = getattr(self.impact_service, "preload", None)
+        if selected_threats and callable(preload):
+            preload_started = perf_counter() if profiling_enabled else None
+            try:
+                preload()
+            except Exception:
+                # Preserve the existing per-threat error isolation if a preload
+                # fails; standalone analyze() can still use its normal path.
+                LOGGER.exception(
+                    "Operations dashboard preload failed; "
+                    "falling back to per-threat analysis"
+                )
+            finally:
+                if profiling_enabled:
+                    timings["data_preload_ms"] += self._elapsed_ms(
+                        preload_started
+                    )
         for threat in selected_threats:
             try:
-                self._analyze_threat(threat, result)
+                if profiling_enabled:
+                    self._analyze_threat_profiled(
+                        threat, result, timings
+                    )
+                else:
+                    self._analyze_threat(threat, result)
             except Exception:
                 threat_id = getattr(threat, "ThreatId", None)
                 LOGGER.exception(
@@ -56,6 +94,30 @@ class OperationsDashboardService:
                         "message": "Threat analysis failed",
                     }
                 )
+        if profiling_enabled:
+            timings["total_execution_ms"] = self._elapsed_ms(
+                total_started
+            )
+            timings["threat_count"] = len(selected_threats)
+            timings["analysis_error_count"] = result["summary"][
+                "analysis_errors"
+            ]
+            LOGGER.debug(
+                json.dumps(
+                    {
+                        "event": "operations_dashboard_profile",
+                        "timings": {
+                            key: (
+                                round(value, 3)
+                                if isinstance(value, float)
+                                else value
+                            )
+                            for key, value in timings.items()
+                        },
+                    },
+                    sort_keys=True,
+                )
+            )
         return result
 
     @classmethod
@@ -68,7 +130,10 @@ class OperationsDashboardService:
     def _recent_threat_query(limit):
         return (
             db.select(Threat)
-            .options(joinedload(Threat.vendor))
+            .options(
+                joinedload(Threat.vendor),
+                selectinload(Threat.cve_links).joinedload(ThreatCVE.cve),
+            )
             .order_by(
                 Threat.CreatedAt.desc(),
                 Threat.ThreatId.desc(),
@@ -86,7 +151,77 @@ class OperationsDashboardService:
             impact_result, self._risk_context(threat)
         )
         decision_result = self.decision_engine.recommend(risk_result)
+        self._aggregate_threat_result(
+            threat,
+            result,
+            vendor_name,
+            product_name,
+            impact_result,
+            risk_result,
+            decision_result,
+        )
 
+    def _analyze_threat_profiled(self, threat, result, timings):
+        vendor_name = self._vendor_name(threat)
+        product_name = self._product_name(threat)
+
+        if isinstance(self.impact_service, ImpactAnalysisService):
+            started = perf_counter()
+            normalization = (
+                self.impact_service.product_normalizer.normalize(
+                    vendor_name, product_name
+                )
+            )
+            timings["product_normalization_ms"] += self._elapsed_ms(
+                started
+            )
+
+            started = perf_counter()
+            impact_result = self.impact_service.analyze_normalized(
+                normalization
+            )
+            timings["impact_analysis_ms"] += self._elapsed_ms(started)
+        else:
+            # Custom impact services retain their existing interface. Their
+            # combined work is reported as impact analysis.
+            started = perf_counter()
+            impact_result = self.impact_service.analyze(
+                vendor_name, product_name
+            )
+            timings["impact_analysis_ms"] += self._elapsed_ms(started)
+
+        started = perf_counter()
+        risk_result = self.risk_service.assess(
+            impact_result, self._risk_context(threat)
+        )
+        timings["risk_assessment_ms"] += self._elapsed_ms(started)
+
+        started = perf_counter()
+        decision_result = self.decision_engine.recommend(risk_result)
+        timings["decision_engine_ms"] += self._elapsed_ms(started)
+
+        started = perf_counter()
+        self._aggregate_threat_result(
+            threat,
+            result,
+            vendor_name,
+            product_name,
+            impact_result,
+            risk_result,
+            decision_result,
+        )
+        timings["dashboard_aggregation_ms"] += self._elapsed_ms(started)
+
+    def _aggregate_threat_result(
+        self,
+        threat,
+        result,
+        vendor_name,
+        product_name,
+        impact_result,
+        risk_result,
+        decision_result,
+    ):
         risk_assets = risk_result.get("asset_results") or []
         for index, action in enumerate(
             decision_result.get("asset_actions") or []
@@ -115,6 +250,23 @@ class OperationsDashboardService:
                 self._communication_item(threat, action)
             )
             result["summary"]["notify_users"] += 1
+
+    @staticmethod
+    def _elapsed_ms(started):
+        return (perf_counter() - started) * 1000
+
+    @staticmethod
+    def _empty_timings():
+        return {
+            "threat_retrieval_ms": 0.0,
+            "data_preload_ms": 0.0,
+            "product_normalization_ms": 0.0,
+            "impact_analysis_ms": 0.0,
+            "risk_assessment_ms": 0.0,
+            "decision_engine_ms": 0.0,
+            "dashboard_aggregation_ms": 0.0,
+            "total_execution_ms": 0.0,
+        }
 
     @staticmethod
     def _asset_destination(action):
@@ -195,9 +347,13 @@ class OperationsDashboardService:
 
     @staticmethod
     def _threat_identifier(threat):
-        cve = getattr(threat, "CVE", None)
+        cve = getattr(threat, "primary_cve_code", None)
+        if not cve:
+            cve = getattr(threat, "CVE", None)
         if cve and str(cve).strip():
-            return str(cve).strip()
+            additional = getattr(threat, "additional_cve_count", 0) or 0
+            suffix = f" +{additional}" if additional else ""
+            return f"{str(cve).strip()}{suffix}"
         threat_id = getattr(threat, "ThreatId", None)
         return f"Threat {threat_id}" if threat_id is not None else "Unknown"
 

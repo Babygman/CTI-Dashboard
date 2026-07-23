@@ -26,7 +26,7 @@ EXPECTED_TABLES = {
     "Vendors",
     "alembic_version",
 }
-EXPECTED_HEAD = "20260723_02"
+EXPECTED_HEAD = "20260723_03"
 
 
 def main():

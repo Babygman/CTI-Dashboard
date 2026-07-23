@@ -47,7 +47,7 @@ class SQLServerIntegrationTests(unittest.TestCase):
                 connection.scalar(
                     text("SELECT version_num FROM alembic_version")
                 ),
-                "20260723_02",
+                "20260723_03",
             )
 
     def test_sql_server_column_types(self):
@@ -71,6 +71,17 @@ class SQLServerIntegrationTests(unittest.TestCase):
         self.assertEqual(
             types[("CollectionRuns", "CollectionRunId")], "bigint"
         )
+        source_columns = {
+            column["name"]: column
+            for column in inspect(self.engine).get_columns("Sources")
+        }
+        for name in (
+            "NextRunAt",
+            "LeaseOwner",
+            "LeaseExpiresAt",
+            "LastHeartbeatAt",
+        ):
+            self.assertIn(name, source_columns)
 
     def test_filtered_indexes_exist(self):
         with self.engine.connect() as connection:
@@ -81,19 +92,20 @@ class SQLServerIntegrationTests(unittest.TestCase):
                     FROM sys.indexes
                     WHERE name IN (
                         'UX_SourceItems_SourceId_ExternalId',
-                        'UX_ThreatCVEs_OnePrimary'
+                        'UX_ThreatCVEs_OnePrimary',
+                        'UX_CollectionRuns_SourceId_Running',
+                        'IX_Sources_Enabled_NextRunAt',
+                        'IX_Sources_LeaseExpiresAt'
                     )
                     """
                 )
             ).all()
         filters = {name: bool(has_filter) for name, has_filter in rows}
-        self.assertEqual(
-            filters,
-            {
-                "UX_SourceItems_SourceId_ExternalId": True,
-                "UX_ThreatCVEs_OnePrimary": True,
-            },
-        )
+        self.assertTrue(filters["UX_SourceItems_SourceId_ExternalId"])
+        self.assertTrue(filters["UX_ThreatCVEs_OnePrimary"])
+        self.assertTrue(filters["UX_CollectionRuns_SourceId_Running"])
+        self.assertFalse(filters["IX_Sources_Enabled_NextRunAt"])
+        self.assertFalse(filters["IX_Sources_LeaseExpiresAt"])
 
 
 if __name__ == "__main__":

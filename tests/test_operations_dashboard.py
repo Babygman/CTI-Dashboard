@@ -1,4 +1,5 @@
-﻿import unittest
+﻿import json
+import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -274,6 +275,7 @@ class OperationsDashboardServiceTests(unittest.TestCase):
             limit=2,
         )
         self.assertEqual(self.impact.analyze.call_count, 2)
+        self.impact.preload.assert_called_once_with()
         self.assertEqual(result["summary"]["monitor"], 2)
 
     def test_configured_threat_limit_is_enforced(self):
@@ -319,7 +321,67 @@ class OperationsDashboardServiceTests(unittest.TestCase):
         session.assert_not_called()
         self.assertEqual(session.method_calls, [])
 
+    def test_debug_mode_logs_structured_stage_timings(self):
+        self._configure_action(
+            action_type="MONITOR",
+            priority="P4",
+            recommendation="Monitor",
+            level="Low",
+        )
+        self.app.config["DEBUG"] = True
+
+        with (
+            self.app.app_context(),
+            patch(
+                "app.services.operations_dashboard.LOGGER.debug"
+            ) as debug_log,
+        ):
+            self.service.analyze([self._threat()], limit=1)
+
+        debug_log.assert_called_once()
+        payload = json.loads(debug_log.call_args.args[0])
+        self.assertEqual(
+            payload["event"],
+            "operations_dashboard_profile",
+        )
+        expected_timings = {
+            "threat_retrieval_ms",
+            "data_preload_ms",
+            "product_normalization_ms",
+            "impact_analysis_ms",
+            "risk_assessment_ms",
+            "decision_engine_ms",
+            "dashboard_aggregation_ms",
+            "total_execution_ms",
+            "threat_count",
+            "analysis_error_count",
+        }
+        self.assertEqual(set(payload["timings"]), expected_timings)
+        self.assertEqual(payload["timings"]["threat_count"], 1)
+        for key in expected_timings - {
+            "threat_count",
+            "analysis_error_count",
+        }:
+            self.assertGreaterEqual(payload["timings"][key], 0)
+
+    def test_production_mode_does_not_log_profile_timings(self):
+        self._configure_action(
+            action_type="MONITOR",
+            priority="P4",
+            recommendation="Monitor",
+            level="Low",
+        )
+
+        with (
+            self.app.app_context(),
+            patch(
+                "app.services.operations_dashboard.LOGGER.debug"
+            ) as debug_log,
+        ):
+            self.service.analyze([self._threat()], limit=1)
+
+        debug_log.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
-

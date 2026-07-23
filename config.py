@@ -33,3 +33,16 @@ class Config:
     CTI_HOST = os.getenv("CTI_HOST", "0.0.0.0").strip() or "0.0.0.0"
     CTI_PORT = _tcp_port("CTI_PORT", 8000)
     CTI_THREADS = _positive_int("CTI_THREADS", 8)
+    CTI_WORKER_POLL_INTERVAL_SECONDS = _positive_int(
+        "CTI_WORKER_POLL_INTERVAL_SECONDS", 30
+    )
+    CTI_WORKER_LEASE_TIMEOUT_SECONDS = _positive_int(
+        "CTI_WORKER_LEASE_TIMEOUT_SECONDS", 300
+    )
+    CTI_WORKER_HEARTBEAT_INTERVAL_SECONDS = _positive_int(
+        "CTI_WORKER_HEARTBEAT_INTERVAL_SECONDS", 30
+    )
+    CTI_WORKER_RETRY_INTERVAL_SECONDS = _positive_int(
+        "CTI_WORKER_RETRY_INTERVAL_SECONDS", 300
+    )
+    CTI_WORKER_BATCH_SIZE = _positive_int("CTI_WORKER_BATCH_SIZE", 25)

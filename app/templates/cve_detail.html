@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{ detail.cve.CVECode }} | CTI Platform{% endblock %}
+
+{% block content %}
+{% set cve = detail.cve %}
+<a class="btn btn-sm btn-outline-secondary mb-3" href="{{ url_for('cves.cve_list') }}">Back to CVEs</a>
+<h2>{{ cve.CVECode }}</h2>
+<div class="card shadow-sm mb-4"><div class="card-body">
+    <dl class="row mb-3">
+        <dt class="col-md-2">CVSS</dt><dd class="col-md-4">{{ cve.CVSSScore if cve.CVSSScore is not none else "Unknown" }} · {{ cve.CVSSSeverity or "Unknown" }}</dd>
+        <dt class="col-md-2">CWE</dt><dd class="col-md-4">{{ cve.CWE or "Unknown" }}</dd>
+        <dt class="col-md-2">Published</dt><dd class="col-md-4">{{ cve.PublishedAt or "Unknown" }}</dd>
+        <dt class="col-md-2">Modified</dt><dd class="col-md-4">{{ cve.ModifiedAt or "Unknown" }}</dd>
+    </dl>
+    <p class="mb-0">{{ cve.Description or "No description is available." }}</p>
+</div></div>
+
+<div class="card shadow-sm mb-4"><div class="card-header fw-semibold">Related Threats</div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Threat</th><th>Severity</th><th>Vendor</th></tr></thead><tbody>
+{% for threat in detail.threats %}<tr><td><a href="{{ url_for('threats.threat_detail', threat_id=threat.ThreatId) }}">{{ threat.Title }}</a></td><td>{{ threat.Severity or "—" }}</td><td>{{ threat.vendor.VendorName if threat.vendor else "—" }}</td></tr>
+{% else %}<tr><td colspan="3" class="text-center text-muted">No related threats.</td></tr>{% endfor %}
+</tbody></table></div></div>
+
+<div class="card shadow-sm mb-4"><div class="card-header fw-semibold">Contributing Sources and Evidence</div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Source</th><th>Title</th><th>Reference</th><th>First Seen</th><th>Last Seen</th></tr></thead><tbody>
+{% for item, source in detail.evidence %}<tr><td>{{ source.SourceName }}</td><td>{{ item.Title or "—" }}</td><td>{% if item.SourceUrl %}<a href="{{ item.SourceUrl }}" target="_blank" rel="noopener">Open</a>{% else %}—{% endif %}</td><td>{{ item.FirstSeenAt }}</td><td>{{ item.LastSeenAt }}</td></tr>
+{% else %}<tr><td colspan="5" class="text-center text-muted">No contributing evidence.</td></tr>{% endfor %}
+</tbody></table></div></div>
+
+<div class="card shadow-sm mb-4"><div class="card-header fw-semibold">Affected Assets</div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Asset</th><th>Owner</th><th>Environment</th><th>Status</th></tr></thead><tbody>
+{% for asset in detail.assets %}<tr><td>{{ asset.AssetName }}</td><td>{{ asset.Owner or "—" }}</td><td>{{ asset.Environment or "—" }}</td><td>{{ asset.Status }}</td></tr>
+{% else %}<tr><td colspan="4" class="text-center text-muted">No affected assets derived.</td></tr>{% endfor %}
+</tbody></table></div></div>
+
+<div class="card shadow-sm"><div class="card-header fw-semibold">Related Remediation Actions</div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Action</th><th>Threat</th><th>Priority</th><th>Status</th></tr></thead><tbody>
+{% for action in detail.actions %}<tr><td><a href="{{ url_for('actions.action_detail', action_id=action.ActionId) }}">{{ action.Title }}</a></td><td>{{ action.threat.Title }}</td><td>{{ action.Priority }}</td><td>{{ action.Status }}</td></tr>
+{% else %}<tr><td colspan="4" class="text-center text-muted">No related remediation actions.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

@@ -19,6 +19,13 @@ class CollectionRun(db.Model):
         db.Index(
             "IX_CollectionRuns_SourceId_StartedAt", "SourceId", "StartedAt"
         ),
+        db.Index(
+            "UX_CollectionRuns_SourceId_Running",
+            "SourceId",
+            unique=True,
+            mssql_where=db.text("Status = N'Running'"),
+            sqlite_where=db.text("Status = 'Running'"),
+        ),
     )
 
     CollectionRunId = db.Column(

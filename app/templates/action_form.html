@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | CTI Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">{{ page_title }}</h2>
+    <a class="btn btn-outline-secondary"
+       href="{{ url_for('actions.action_list') }}">Cancel</a>
+</div>
+
+<form method="post" class="card shadow-sm">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="threat_id">Threat</label>
+                <select class="form-select{% if errors.threat_id %} is-invalid{% endif %}"
+                        id="threat_id" name="threat_id" required>
+                    <option value="">Select a threat</option>
+                    {% for threat in threats %}
+                    <option value="{{ threat.ThreatId }}"
+                            {% if values.ThreatId|string == threat.ThreatId|string %}selected{% endif %}>
+                        {{ threat.CVE or ('Threat ' ~ threat.ThreatId) }} — {{ threat.Title }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if errors.threat_id %}<div class="invalid-feedback">{{ errors.threat_id }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="title">Title</label>
+                <input class="form-control{% if errors.title %} is-invalid{% endif %}"
+                       id="title" name="title" maxlength="255"
+                       value="{{ values.Title }}" required>
+                {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="description">Description</label>
+                <textarea class="form-control" id="description"
+                          name="description" rows="3">{{ values.Description }}</textarea>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="action_type">Action Type</label>
+                <select class="form-select{% if errors.action_type %} is-invalid{% endif %}"
+                        id="action_type" name="action_type" required>
+                    {% for option in action_types %}
+                    <option {% if values.ActionType == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.action_type %}<div class="invalid-feedback">{{ errors.action_type }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="priority">Priority</label>
+                <select class="form-select{% if errors.priority %} is-invalid{% endif %}"
+                        id="priority" name="priority" required>
+                    {% for option in priorities %}
+                    <option {% if values.Priority == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.priority %}<div class="invalid-feedback">{{ errors.priority }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="status">Status</label>
+                <select class="form-select{% if errors.status %} is-invalid{% endif %}"
+                        id="status" name="status" required>
+                    {% for option in statuses %}
+                    <option {% if values.Status == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.status %}<div class="invalid-feedback">{{ errors.status }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="approval_status">Approval</label>
+                <select class="form-select{% if errors.approval_status %} is-invalid{% endif %}"
+                        id="approval_status" name="approval_status" required>
+                    {% for option in approval_statuses %}
+                    <option {% if values.ApprovalStatus == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.approval_status %}<div class="invalid-feedback">{{ errors.approval_status }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="owner">Owner</label>
+                <input class="form-control{% if errors.owner %} is-invalid{% endif %}"
+                       id="owner" name="owner" maxlength="200"
+                       value="{{ values.Owner }}">
+                {% if errors.owner %}<div class="invalid-feedback">{{ errors.owner }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="due_date">Due Date</label>
+                <input class="form-control{% if errors.due_date %} is-invalid{% endif %}"
+                       type="date" id="due_date" name="due_date"
+                       value="{{ values.DueDate }}">
+                {% if errors.due_date %}<div class="invalid-feedback">{{ errors.due_date }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="ticket_reference">Ticket Reference</label>
+                <input class="form-control{% if errors.ticket_reference %} is-invalid{% endif %}"
+                       id="ticket_reference" name="ticket_reference"
+                       maxlength="255" value="{{ values.TicketReference }}">
+                {% if errors.ticket_reference %}<div class="invalid-feedback">{{ errors.ticket_reference }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea class="form-control" id="notes"
+                          name="notes" rows="3">{{ values.Notes }}</textarea>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer text-end">
+        <button class="btn btn-primary" type="submit">Save Action</button>
+    </div>
+</form>
+{% endblock %}

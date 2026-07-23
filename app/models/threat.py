@@ -32,3 +32,32 @@ class Threat(db.Model):
     ModifiedDate = db.Column(DATETIME_TYPE)
 
     vendor = db.relationship("Vendor")
+    remediation_actions = db.relationship(
+        "RemediationAction",
+        back_populates="threat",
+        passive_deletes="all",
+    )
+    cve_links = db.relationship(
+        "ThreatCVE",
+        back_populates="threat",
+        cascade="all, delete-orphan",
+        order_by="(ThreatCVE.IsPrimary.desc(), ThreatCVE.CVEId.asc())",
+    )
+
+    @property
+    def primary_cve(self):
+        if self.cve_links:
+            return next(
+                (link.cve for link in self.cve_links if link.IsPrimary),
+                self.cve_links[0].cve,
+            )
+        return None
+
+    @property
+    def primary_cve_code(self):
+        primary = self.primary_cve
+        return primary.CVECode if primary else self.CVE
+
+    @property
+    def additional_cve_count(self):
+        return max(len(self.cve_links) - 1, 0)

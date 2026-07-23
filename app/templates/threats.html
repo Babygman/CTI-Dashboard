@@ -80,15 +80,28 @@
                             <span class="badge bg-{{ severity_class }}">{{ threat.Severity or 'Unspecified' }}</span>
                         </td>
                         <td>
-                            {% if threat.ReferenceUrl %}
-                            <a href="{{ threat.ReferenceUrl }}" target="_blank" rel="noopener noreferrer">
+                            <a href="{{ url_for(
+                                'threats.threat_detail',
+                                threat_id=threat.ThreatId,
+                                return_q=q or none,
+                                return_vendor_id=selected_vendor_id,
+                                return_severity=selected_severity or none
+                            ) }}">
                                 {{ threat.Title }}
                             </a>
+                        </td>
+                        <td>
+                            {% if threat.primary_cve %}
+                            <a href="{{ url_for('cves.cve_detail', cve_id=threat.primary_cve.CVEId) }}">
+                                {{ threat.primary_cve.CVECode }}
+                            </a>
+                            {% if threat.additional_cve_count %}
+                            <span class="badge text-bg-secondary">+{{ threat.additional_cve_count }}</span>
+                            {% endif %}
                             {% else %}
-                            {{ threat.Title }}
+                            {{ threat.CVE or '' }}
                             {% endif %}
                         </td>
-                        <td>{{ threat.CVE or '' }}</td>
                         <td>{{ threat.CVSS if threat.CVSS is not none else '' }}</td>
                         <td>
                             {% if threat.KEV %}

@@ -5,11 +5,16 @@ from flask import flash, redirect, render_template, request, url_for
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from app.extensions import db
+from app.models.cve import CVE
 from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.vendor import Vendor
+from app.models.threat_cve import ThreatCVE
+from app.services.cve_service import CVEPersistenceService, normalize_cve_code
+from app.services.threat_detail import ThreatDetailService
 
 from . import threats_blueprint
 
@@ -141,13 +146,19 @@ def threat_list():
     if severity not in SEVERITIES:
         severity = ""
 
-    statement = db.select(Threat).options(joinedload(Threat.vendor))
+    statement = db.select(Threat).options(
+        joinedload(Threat.vendor),
+        selectinload(Threat.cve_links).joinedload(ThreatCVE.cve),
+    )
     if query:
         pattern = f"%{query}%"
         statement = statement.where(
             or_(
                 Threat.Title.ilike(pattern),
                 Threat.CVE.ilike(pattern),
+                Threat.cve_links.any(
+                    ThreatCVE.cve.has(CVE.CVECode.ilike(pattern))
+                ),
                 Threat.Source.ilike(pattern),
                 Threat.Summary.ilike(pattern),
             )
@@ -173,6 +184,30 @@ def threat_list():
     )
 
 
+@threats_blueprint.get("/threats/<int:threat_id>")
+def threat_detail(threat_id):
+    detail = ThreatDetailService().get(threat_id)
+    if detail is None:
+        return "", 404
+
+    query = request.args.get("return_q", "").strip()
+    vendor_id = request.args.get("return_vendor_id", type=int)
+    severity = request.args.get("return_severity", "").strip()
+    if severity not in SEVERITIES:
+        severity = ""
+    back_url = url_for(
+        "threats.threat_list",
+        q=query or None,
+        vendor_id=vendor_id,
+        severity=severity or None,
+    )
+    return render_template(
+        "threat_detail.html",
+        detail=detail,
+        back_url=back_url,
+    )
+
+
 @threats_blueprint.route("/threats/add", methods=["GET", "POST"])
 def add_threat():
     form_data = _empty_form_data()
@@ -187,6 +222,12 @@ def add_threat():
             threat = Threat()
             _assign_values(threat, values)
             db.session.add(threat)
+            db.session.flush()
+            normalized_cve = normalize_cve_code(threat.CVE)
+            if normalized_cve:
+                CVEPersistenceService.sync_threat(
+                    threat, [normalized_cve], source=threat.Source
+                )
             db.session.commit()
             flash("Threat added successfully.", "success")
             return redirect(url_for("threats.threat_list"))
@@ -215,6 +256,11 @@ def edit_threat(threat_id):
 
         if not errors:
             _assign_values(threat, values)
+            normalized_cve = normalize_cve_code(threat.CVE)
+            if normalized_cve:
+                CVEPersistenceService.sync_threat(
+                    threat, [normalized_cve], source=threat.Source
+                )
             db.session.commit()
             flash("Threat updated successfully.", "success")
             return redirect(url_for("threats.threat_list"))
@@ -269,4 +315,3 @@ def delete_threat(threat_id):
 
     flash("Threat deleted successfully.", "success")
     return redirect(url_for("threats.threat_list"))
-

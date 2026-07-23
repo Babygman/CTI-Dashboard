@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action.Title }} | CTI Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <a href="{{ url_for('actions.action_list') }}"
+           class="btn btn-sm btn-outline-secondary mb-3">Back to Actions</a>
+        <h2 class="mb-2">{{ action.Title }}</h2>
+        <div class="d-flex gap-2">
+            <span class="badge text-bg-primary">{{ action.ActionType }}</span>
+            <span class="badge text-bg-{% if action.Priority == 'Critical' %}danger{% elif action.Priority == 'High' %}warning{% else %}secondary{% endif %}">{{ action.Priority }}</span>
+            <span class="badge text-bg-secondary">{{ action.Status }}</span>
+            {% if action.is_overdue %}<span class="badge text-bg-danger">Overdue</span>{% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary"
+           href="{{ url_for('actions.edit_action', action_id=action.ActionId) }}">Edit</a>
+        {% if action.Status == "Completed" or action.Status == "Cancelled" %}
+        <form method="post" action="{{ url_for('actions.reopen_action', action_id=action.ActionId) }}">
+            <button class="btn btn-outline-success" type="submit">Reopen</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('actions.complete_action', action_id=action.ActionId) }}">
+            <button class="btn btn-success" type="submit">Complete</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">Action Details</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Threat</dt>
+                    <dd class="col-sm-9"><a href="{{ url_for('threats.threat_detail', threat_id=action.ThreatId) }}">{{ action.threat.Title }}</a></dd>
+                    <dt class="col-sm-3">Owner</dt><dd class="col-sm-9">{{ action.Owner or "Unassigned" }}</dd>
+                    <dt class="col-sm-3">Due date</dt><dd class="col-sm-9">{{ action.DueDate or "Not set" }}</dd>
+                    <dt class="col-sm-3">Approval</dt><dd class="col-sm-9">{{ action.ApprovalStatus }}</dd>
+                    <dt class="col-sm-3">Ticket</dt><dd class="col-sm-9">{{ action.TicketReference or "Not linked" }}</dd>
+                    <dt class="col-sm-3">Created</dt><dd class="col-sm-9">{{ action.CreatedAt }}</dd>
+                    <dt class="col-sm-3">Updated</dt><dd class="col-sm-9">{{ action.UpdatedAt }}</dd>
+                    <dt class="col-sm-3">Completed</dt><dd class="col-sm-9">{{ action.CompletedAt or "—" }}</dd>
+                </dl>
+                <hr>
+                <h6>Description</h6>
+                <p style="white-space: pre-wrap;">{{ action.Description or "No description." }}</p>
+                <h6>Notes</h6>
+                <p class="mb-0" style="white-space: pre-wrap;">{{ action.Notes or "No notes." }}</p>
+            </div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Change History</div>
+            <div class="list-group list-group-flush">
+                {% for entry in action.history|reverse %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ entry.ChangeType }}{% if entry.FieldName %}: {{ entry.FieldName }}{% endif %}</strong>
+                        <span class="text-muted">{{ entry.ChangedAt }}</span>
+                    </div>
+                    {% if entry.OldValue is not none or entry.NewValue is not none %}
+                    <div class="small text-muted mt-1">
+                        {{ entry.OldValue or "—" }} → {{ entry.NewValue or "—" }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="list-group-item text-muted">No history recorded.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Update Status</div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('actions.update_status', action_id=action.ActionId) }}">
+                    <select class="form-select mb-3" name="status">
+                        {% for option in statuses %}
+                        <option {% if action.Status == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary w-100" type="submit">Update Status</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

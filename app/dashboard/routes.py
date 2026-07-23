@@ -8,6 +8,7 @@ from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.vendor import Vendor
 from app.services.operations_dashboard import OperationsDashboardService
+from app.repositories import RemediationActionRepository
 
 from . import dashboard_blueprint
 
@@ -102,6 +103,9 @@ def dashboard():
     ).all()
 
     operations = OperationsDashboardService().analyze()
+    open_remediation_actions = (
+        RemediationActionRepository.list_open()
+    )
 
     return render_template(
         "dashboard.html",
@@ -123,4 +127,5 @@ def dashboard():
         severity_values=[count for _, count in severity_rows],
         vendor_labels=[vendor for vendor, _ in vendor_rows],
         vendor_values=[count for _, count in vendor_rows],
+        open_remediation_actions=open_remediation_actions,
     )

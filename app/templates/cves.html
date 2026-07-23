@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}CVEs | CTI Platform{% endblock %}
+
+{% block content %}
+<h2 class="mb-3">CVEs</h2>
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-4">
+            <label class="form-label" for="q">CVE</label>
+            <input class="form-control" id="q" name="q" value="{{ q }}" placeholder="CVE-2026-1234">
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label" for="severity">Severity</label>
+            <select class="form-select" id="severity" name="severity">
+                <option value="">All Severities</option>
+                {% for severity in severity_options %}
+                <option {% if selected_severity == severity %}selected{% endif %}>{{ severity }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <label class="form-label" for="cvss_min">Minimum CVSS</label>
+            <input class="form-control" type="number" step="0.1" min="0" max="10" id="cvss_min" name="cvss_min" value="{{ cvss_min }}">
+        </div>
+        <div class="col-lg-2">
+            <label class="form-label" for="cvss_max">Maximum CVSS</label>
+            <input class="form-control" type="number" step="0.1" min="0" max="10" id="cvss_max" name="cvss_max" value="{{ cvss_max }}">
+        </div>
+        <div class="col-lg-1"><button class="btn btn-primary w-100">Filter</button></div>
+    </div>
+</form>
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>CVE</th><th>Severity</th><th>CVSS</th><th>Published</th><th>Threats</th><th>Assets</th></tr></thead>
+            <tbody>
+                {% for cve, threat_count in rows %}
+                <tr>
+                    <td><a href="{{ url_for('cves.cve_detail', cve_id=cve.CVEId) }}">{{ cve.CVECode }}</a></td>
+                    <td>{{ cve.CVSSSeverity or "Unknown" }}</td>
+                    <td>{{ cve.CVSSScore if cve.CVSSScore is not none else "—" }}</td>
+                    <td>{{ cve.PublishedAt or "—" }}</td>
+                    <td>{{ threat_count }}</td>
+                    <td>{{ asset_counts.get(cve.CVEId, 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No CVEs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

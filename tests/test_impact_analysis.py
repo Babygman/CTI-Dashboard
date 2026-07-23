@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import Mock
 
+from sqlalchemy import event
+
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.catalog_product import CatalogProduct
@@ -159,6 +161,42 @@ class ImpactAnalysisServiceTests(unittest.TestCase):
             "Unknown", "Unknown Product"
         )
         self.assertFalse(result["matched"])
+
+    def test_preloaded_impact_analysis_uses_three_queries_for_many_inputs(self):
+        self._add_asset("FG200E", critical=True)
+        statements = []
+
+        def record_statement(
+            connection,
+            cursor,
+            statement,
+            parameters,
+            context,
+            executemany,
+        ):
+            statements.append(statement)
+
+        event.listen(
+            db.engine,
+            "before_cursor_execute",
+            record_statement,
+        )
+        try:
+            self.service.preload()
+            first = self.service.analyze("Fortinet", "FortiOS")
+            second = self.service.analyze("Fortinet", "FortiGate")
+            missing = self.service.analyze("Unknown", "Unknown")
+        finally:
+            event.remove(
+                db.engine,
+                "before_cursor_execute",
+                record_statement,
+            )
+
+        self.assertEqual(first["affected_asset_count"], 1)
+        self.assertEqual(second["affected_asset_count"], 1)
+        self.assertFalse(missing["matched"])
+        self.assertEqual(len(statements), 3)
 
 
 if __name__ == "__main__":

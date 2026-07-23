@@ -23,7 +23,15 @@
                 <tbody>
                     {% for item in actions %}
                     <tr>
-                        <td>{{ item.threat_identifier }}</td>
+                        <td>
+                            {% if item.threat_id %}
+                            <a href="{{ url_for('threats.threat_detail', threat_id=item.threat_id) }}">
+                                {{ item.threat_identifier }}
+                            </a>
+                            {% else %}
+                            {{ item.threat_identifier }}
+                            {% endif %}
+                        </td>
                         <td>{{ item.asset_name or 'Unknown' }}</td>
                         <td>{{ item.vendor or 'Unknown' }}</td>
                         <td>{{ item.product or 'Unknown' }}</td>
@@ -47,6 +55,40 @@
 {% block content %}
 
 <h2 class="mb-4">Security Operations</h2>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Open Remediation Actions</span>
+        <a class="btn btn-sm btn-outline-primary"
+           href="{{ url_for('actions.action_list') }}">View All</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr><th>Action</th><th>Threat</th><th>Priority</th><th>Status</th><th>Owner</th><th>Due</th></tr>
+            </thead>
+            <tbody>
+                {% for action in open_remediation_actions %}
+                <tr class="{% if action.is_overdue %}table-danger{% endif %}">
+                    <td><a href="{{ url_for('actions.action_detail', action_id=action.ActionId) }}">{{ action.Title }}</a></td>
+                    <td>
+                        <a href="{{ url_for('threats.threat_detail', threat_id=action.ThreatId) }}">
+                            {{ action.threat.primary_cve_code or ('Threat ' ~ action.ThreatId) }}
+                            {% if action.threat.additional_cve_count %}+{{ action.threat.additional_cve_count }}{% endif %}
+                        </a>
+                    </td>
+                    <td>{{ action.Priority }}</td>
+                    <td>{{ action.Status }}</td>
+                    <td>{{ action.Owner or "Unassigned" }}</td>
+                    <td>{{ action.DueDate or "—" }}{% if action.is_overdue %} <span class="badge text-bg-danger">Overdue</span>{% endif %}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-3">No open remediation actions.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-6 g-3">
     <div class="col">
@@ -136,7 +178,15 @@
                 <tbody>
                     {% for item in operations.communication_actions %}
                     <tr>
-                        <td>{{ item.threat_identifier }}</td>
+                        <td>
+                            {% if item.threat_id %}
+                            <a href="{{ url_for('threats.threat_detail', threat_id=item.threat_id) }}">
+                                {{ item.threat_identifier }}
+                            </a>
+                            {% else %}
+                            {{ item.threat_identifier }}
+                            {% endif %}
+                        </td>
                         <td>{{ item.recommendation }}</td>
                         <td>{{ item.priority }}</td>
                         <td>{{ item.target }}</td>

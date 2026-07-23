@@ -1,12 +1,31 @@
-from sqlalchemy import func
+from collections import defaultdict
 
-from app.extensions import db
-from app.models.catalog_product import CatalogProduct
-from app.models.product_alias import ProductAlias
+from app.repositories import (
+    CatalogProductRepository,
+    ProductAliasRepository,
+)
 
 
 class ProductNormalizer:
     """Resolve a feed vendor/product name to one active catalog product."""
+
+    def __init__(
+        self,
+        catalog_product_repository=None,
+        product_alias_repository=None,
+    ):
+        self.catalog_product_repository = (
+            catalog_product_repository or CatalogProductRepository()
+        )
+        self.product_alias_repository = (
+            product_alias_repository or ProductAliasRepository()
+        )
+        self._preloaded_indexes = None
+
+    def preload(self):
+        """Load the active catalog and alias tables once for batch matching."""
+        self._preloaded_indexes = self._load_indexes()
+        return self
 
     def normalize(self, vendor_name, product_name):
         input_vendor = (vendor_name or "").strip()
@@ -14,8 +33,16 @@ class ProductNormalizer:
         if not input_product:
             return self._unmatched_result(input_vendor, input_product)
 
-        alias_candidates = self._alias_candidates(input_product)
-        product_candidates = self._product_candidates(input_product)
+        # Dashboard batches use the preloaded indexes. Standalone callers retain
+        # fresh-per-call behavior for backward compatibility with mutable data.
+        indexes = self._preloaded_indexes or self._load_indexes()
+        folded_product = input_product.casefold()
+        alias_candidates = indexes["aliases_by_name"].get(
+            folded_product, ()
+        )
+        product_candidates = indexes["products_by_name"].get(
+            folded_product, ()
+        )
 
         ordered_matches = (
             (
@@ -132,37 +159,29 @@ class ProductNormalizer:
 
         return self._unmatched_result(input_vendor, input_product)
 
-    @staticmethod
-    def _alias_candidates(product_name):
-        return db.session.execute(
-            db.select(ProductAlias, CatalogProduct)
-            .join(
-                CatalogProduct,
-                ProductAlias.CatalogProductId
-                == CatalogProduct.CatalogProductId,
-            )
-            .where(
-                ProductAlias.Active == True,
-                CatalogProduct.Active == True,
-                func.lower(ProductAlias.Alias) == product_name.lower(),
-            )
-            .order_by(
-                CatalogProduct.CatalogProductId.asc(),
-                ProductAlias.ProductAliasId.asc(),
-            )
-        ).all()
+    def _load_indexes(self):
+        products = self.catalog_product_repository.list_active()
+        aliases = self.product_alias_repository.list_active()
+        products_by_id = {
+            product.CatalogProductId: product for product in products
+        }
+        products_by_name = defaultdict(list)
+        aliases_by_name = defaultdict(list)
 
-    @staticmethod
-    def _product_candidates(product_name):
-        return db.session.execute(
-            db.select(CatalogProduct)
-            .where(
-                CatalogProduct.Active == True,
-                func.lower(CatalogProduct.ProductName)
-                == product_name.lower(),
-            )
-            .order_by(CatalogProduct.CatalogProductId.asc())
-        ).scalars().all()
+        # These dictionaries replace the former per-threat SQL lookups.
+        for product in products:
+            products_by_name[product.ProductName.casefold()].append(product)
+        for alias in aliases:
+            product = products_by_id.get(alias.CatalogProductId)
+            if product is not None:
+                aliases_by_name[alias.Alias.casefold()].append(
+                    (alias, product)
+                )
+
+        return {
+            "products_by_name": dict(products_by_name),
+            "aliases_by_name": dict(aliases_by_name),
+        }
 
     @classmethod
     def _filter_aliases(

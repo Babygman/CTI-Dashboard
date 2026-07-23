@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Sources | CTI Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Source Administration</h2>
+        <p class="text-muted mb-0">
+            Collection status and health for configured threat sources.
+        </p>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Source</th>
+                        <th>Enabled</th>
+                        <th>Health</th>
+                        <th>Status</th>
+                        <th>Last Run</th>
+                        <th>Next Run</th>
+                        <th>Success</th>
+                        <th>Failure</th>
+                        <th>Last Error</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in source_rows %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ row.source.SourceName }}</div>
+                            <small class="text-muted">{{ row.source.SourceType }}</small>
+                        </td>
+                        <td>{{ "Yes" if row.source.Enabled else "No" }}</td>
+                        <td>
+                            <span class="badge text-bg-{{ row.health_class }}">
+                                {{ row.health }}
+                            </span>
+                        </td>
+                        <td>{{ row.status }}</td>
+                        <td>
+                            {{ row.latest_run.StartedAt if row.latest_run else "Never" }}
+                        </td>
+                        <td>
+                            {% if not row.source.Enabled %}
+                                Disabled
+                            {% elif row.next_run %}
+                                {{ row.next_run }}
+                            {% else %}
+                                Due now
+                            {% endif %}
+                        </td>
+                        <td>{{ row.success_count }}</td>
+                        <td>{{ row.failure_count }}</td>
+                        <td class="text-truncate" style="max-width: 240px;">
+                            {{ row.last_error or "—" }}
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('sources.source_detail', source_id=row.source.SourceId) }}">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-5">
+                            No collection sources are configured.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

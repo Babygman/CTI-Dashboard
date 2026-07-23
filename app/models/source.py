@@ -16,6 +16,12 @@ class Source(db.Model):
             "Priority BETWEEN 0 AND 100", name="CK_Sources_Priority"
         ),
         db.Index("IX_Sources_Enabled", "Enabled"),
+        db.Index(
+            "IX_Sources_Enabled_NextRunAt",
+            "Enabled",
+            "NextRunAt",
+        ),
+        db.Index("IX_Sources_LeaseExpiresAt", "LeaseExpiresAt"),
     )
 
     SourceId = db.Column(db.Integer, primary_key=True)
@@ -37,6 +43,10 @@ class Source(db.Model):
     )
     LastSuccessfulCollection = db.Column(DATETIME_TYPE)
     LastCollectionStatus = db.Column(db.Unicode(20))
+    NextRunAt = db.Column(DATETIME_TYPE)
+    LeaseOwner = db.Column(db.Unicode(255))
+    LeaseExpiresAt = db.Column(DATETIME_TYPE)
+    LastHeartbeatAt = db.Column(DATETIME_TYPE)
     CreatedAt = db.Column(
         DATETIME_TYPE, nullable=False, server_default=db.text("SYSUTCDATETIME()")
     )

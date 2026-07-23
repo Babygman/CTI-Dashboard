@@ -1,5 +1,7 @@
 import unittest
 
+from sqlalchemy import event
+
 from app.extensions import db
 from app.models.catalog_product import CatalogProduct
 from app.models.product_alias import ProductAlias
@@ -184,6 +186,41 @@ class ProductNormalizerTests(unittest.TestCase):
         self.assertFalse(blank["matched"])
         self.assertEqual(blank["vendor_name"], "Unknown")
         self.assertEqual(blank["product_name"], "")
+
+    def test_preloaded_normalization_uses_two_queries_for_many_inputs(self):
+        statements = []
+
+        def record_statement(
+            connection,
+            cursor,
+            statement,
+            parameters,
+            context,
+            executemany,
+        ):
+            statements.append(statement)
+
+        event.listen(
+            db.engine,
+            "before_cursor_execute",
+            record_statement,
+        )
+        try:
+            self.normalizer.preload()
+            first = self.normalizer.normalize("Fortinet", "FortiOS")
+            second = self.normalizer.normalize("Fortinet", "FortiGate")
+            missing = self.normalizer.normalize("Unknown", "Unknown")
+        finally:
+            event.remove(
+                db.engine,
+                "before_cursor_execute",
+                record_statement,
+            )
+
+        self.assertTrue(first["matched"])
+        self.assertTrue(second["matched"])
+        self.assertFalse(missing["matched"])
+        self.assertEqual(len(statements), 2)
 
 
 if __name__ == "__main__":

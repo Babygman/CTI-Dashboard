@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Remediation Actions | CTI Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Remediation Actions</h2>
+        <p class="text-muted mb-0">Track security work through completion.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('actions.create_action') }}">
+        Create Action
+    </a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All</option>
+                {% for option in statuses %}
+                <option {% if filters.status == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="priority">Priority</label>
+            <select class="form-select" id="priority" name="priority">
+                <option value="">All</option>
+                {% for option in priorities %}
+                <option {% if filters.priority == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="owner">Owner</label>
+            <input class="form-control" id="owner" name="owner"
+                   value="{{ filters.owner }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="due_date">Due Date</label>
+            <input class="form-control" type="date" id="due_date"
+                   name="due_date" value="{{ filters.due_date }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="threat_id">Threat</label>
+            <select class="form-select" id="threat_id" name="threat_id">
+                <option value="">All</option>
+                {% for threat in threats %}
+                <option value="{{ threat.ThreatId }}"
+                        {% if filters.threat_id == threat.ThreatId %}selected{% endif %}>
+                    {{ threat.CVE or threat.ThreatId }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-outline-primary flex-grow-1" type="submit">Filter</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('actions.action_list') }}">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Action</th><th>Threat</th><th>Type</th>
+                    <th>Priority</th><th>Status</th><th>Owner</th>
+                    <th>Due</th><th>Approval</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in actions %}
+                <tr class="{% if action.is_overdue %}table-danger{% endif %}">
+                    <td>
+                        <a href="{{ url_for('actions.action_detail', action_id=action.ActionId) }}">
+                            {{ action.Title }}
+                        </a>
+                        {% if action.is_overdue %}<span class="badge text-bg-danger ms-1">Overdue</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('threats.threat_detail', threat_id=action.ThreatId) }}">
+                            {{ action.threat.CVE or ('Threat ' ~ action.ThreatId) }}
+                        </a>
+                    </td>
+                    <td>{{ action.ActionType }}</td>
+                    <td>{{ action.Priority }}</td>
+                    <td>{{ action.Status }}</td>
+                    <td>{{ action.Owner or "Unassigned" }}</td>
+                    <td>{{ action.DueDate or "—" }}</td>
+                    <td>{{ action.ApprovalStatus }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-5">No remediation actions found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

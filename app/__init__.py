@@ -13,24 +13,30 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     from .assets import assets_blueprint
+    from .actions import actions_blueprint
     from .auth import auth_blueprint
     from .dashboard import dashboard_blueprint
+    from .cves import cves_blueprint
     from .health import health_blueprint
     from .product_catalog import product_catalog_blueprint
     from .threats import threats_blueprint
     from .vendors import vendors_blueprint
     from .awareness import awareness_bp
     from .settings import settings_bp
+    from .sources import sources_blueprint
 
     app.register_blueprint(assets_blueprint)
+    app.register_blueprint(actions_blueprint)
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(dashboard_blueprint)
+    app.register_blueprint(cves_blueprint)
     app.register_blueprint(health_blueprint)
     app.register_blueprint(product_catalog_blueprint)
     app.register_blueprint(vendors_blueprint)
     app.register_blueprint(threats_blueprint)
     app.register_blueprint(awareness_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(sources_blueprint)
 
     from .collectors.commands import collector_cli
     from .services.asset_import_commands import import_assets_command
