@@ -9,6 +9,7 @@ from .source import Source
 from .source_item import SourceItem
 from .threat import Threat
 from .threat_cve import ThreatCVE
+from .threat_observation import ThreatObservation
 from .vendor import Vendor
 
 
@@ -24,5 +25,6 @@ __all__ = [
     "SourceItem",
     "Threat",
     "ThreatCVE",
+    "ThreatObservation",
     "Vendor",
 ]

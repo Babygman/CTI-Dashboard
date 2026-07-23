@@ -14,6 +14,7 @@ MIGRATION_FILES = (
     "20260723_01_remediation_actions.py",
     "20260723_02_multi_cve_persistence.py",
     "20260723_03_collection_worker_leases.py",
+    "20260723_04_canonical_threats.py",
 )
 APPLICATION_TABLES = {
     "Assets",
@@ -27,6 +28,7 @@ APPLICATION_TABLES = {
     "Sources",
     "SystemSettings",
     "ThreatCVEs",
+    "ThreatObservations",
     "Threats",
     "Vendors",
 }
@@ -94,6 +96,7 @@ class AlembicBaselineTests(unittest.TestCase):
                 ("20260723_01", "20260723_00"),
                 ("20260723_02", "20260723_01"),
                 ("20260723_03", "20260723_02"),
+                ("20260723_04", "20260723_03"),
             ],
         )
 

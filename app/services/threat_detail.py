@@ -40,6 +40,7 @@ class ThreatDetailService:
             self._evidence_item(source_item, source, collection_run)
             for source_item, source, collection_run in evidence_rows
         ]
+        observations = self._observations(threat, evidence)
         vendor_name = (
             threat.vendor.VendorName if threat.vendor else None
         )
@@ -73,11 +74,55 @@ class ThreatDetailService:
             "affected_assets": self._affected_assets(impact, risk),
             "ai_summary": self._ai_summary(threat),
             "evidence": evidence,
+            "observations": observations,
+            "source_badges": sorted(
+                {
+                    row["source_name"]
+                    for row in observations
+                    if row["source_name"]
+                }
+            ),
+            "published_timeline": sorted(
+                observations,
+                key=lambda row: (
+                    row["published_date"] or row["observed_date"],
+                    row["observation"].ObservationId,
+                ),
+            ),
             "history": self._history(evidence),
             "related_actions": self.action_repository.list_for_threat(
                 threat_id
             ),
         }
+
+    @staticmethod
+    def _observations(threat, evidence):
+        links = {}
+        fallback_links = {}
+        for item in evidence:
+            source_item = item["source_item"]
+            key = (source_item.SourceId, source_item.ExternalId)
+            links[key] = source_item.SourceUrl
+            fallback_links.setdefault(
+                source_item.SourceId, source_item.SourceUrl
+            )
+        return [
+            {
+                "observation": observation,
+                "source_name": (
+                    observation.source.SourceName
+                    if observation.source
+                    else threat.Source or "Legacy"
+                ),
+                "published_date": observation.PublishedDate,
+                "observed_date": observation.ObservedDate,
+                "source_url": links.get(
+                    (observation.SourceId, observation.ExternalId)
+                )
+                or fallback_links.get(observation.SourceId),
+            }
+            for observation in threat.observations
+        ]
 
     @staticmethod
     def _evidence_item(source_item, source, collection_run):

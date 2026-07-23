@@ -6,6 +6,7 @@ from app.models.collection_run import CollectionRun
 from app.models.source import Source
 from app.models.source_item import SourceItem
 from app.models.threat import Threat
+from app.models.threat_observation import ThreatObservation
 from app.models.vendor import Vendor
 from app.services.operations_dashboard import OperationsDashboardService
 from app.repositories import RemediationActionRepository
@@ -61,6 +62,11 @@ def dashboard():
     ) or 0
     enabled_sources = db.session.scalar(
         db.select(func.count(Source.SourceId)).where(Source.Enabled == True)
+    ) or 0
+    contributing_sources = db.session.scalar(
+        db.select(func.count(distinct(ThreatObservation.SourceId))).where(
+            ThreatObservation.SourceId.is_not(None)
+        )
     ) or 0
 
     latest_run_row = db.session.execute(
@@ -120,6 +126,7 @@ def dashboard():
         nvd_source_items=nvd_source_items,
         multi_source_threats=multi_source_threats,
         enabled_sources=enabled_sources,
+        contributing_sources=contributing_sources,
         latest_run=latest_run,
         latest_run_source=latest_run_source,
         latest_run_errors=latest_run_errors,

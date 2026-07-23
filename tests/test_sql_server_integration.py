@@ -37,6 +37,7 @@ class SQLServerIntegrationTests(unittest.TestCase):
             "Sources",
             "SystemSettings",
             "ThreatCVEs",
+            "ThreatObservations",
             "Threats",
             "Vendors",
             "alembic_version",
@@ -47,7 +48,7 @@ class SQLServerIntegrationTests(unittest.TestCase):
                 connection.scalar(
                     text("SELECT version_num FROM alembic_version")
                 ),
-                "20260723_03",
+                "20260723_04",
             )
 
     def test_sql_server_column_types(self):
@@ -94,6 +95,7 @@ class SQLServerIntegrationTests(unittest.TestCase):
                         'UX_SourceItems_SourceId_ExternalId',
                         'UX_ThreatCVEs_OnePrimary',
                         'UX_CollectionRuns_SourceId_Running',
+                        'UX_ThreatObservations_SourceId_ExternalId',
                         'IX_Sources_Enabled_NextRunAt',
                         'IX_Sources_LeaseExpiresAt'
                     )
@@ -104,6 +106,9 @@ class SQLServerIntegrationTests(unittest.TestCase):
         self.assertTrue(filters["UX_SourceItems_SourceId_ExternalId"])
         self.assertTrue(filters["UX_ThreatCVEs_OnePrimary"])
         self.assertTrue(filters["UX_CollectionRuns_SourceId_Running"])
+        self.assertTrue(
+            filters["UX_ThreatObservations_SourceId_ExternalId"]
+        )
         self.assertFalse(filters["IX_Sources_Enabled_NextRunAt"])
         self.assertFalse(filters["IX_Sources_LeaseExpiresAt"])
 

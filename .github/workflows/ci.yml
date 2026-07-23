@@ -93,6 +93,7 @@ jobs:
           tests/test_remediation_action_migration.py
           tests/test_multi_cve_migration.py
           tests/test_collection_worker_migration.py
+          tests/test_canonical_threat_migration.py
 
   sql-server:
     name: SQL Server migration lifecycle
@@ -187,6 +188,7 @@ jobs:
           tests/test_remediation_action_migration.py
           tests/test_multi_cve_migration.py
           tests/test_collection_worker_migration.py
+          tests/test_canonical_threat_migration.py
           tests/test_sql_server_integration.py
 
       - name: Alembic downgrade base

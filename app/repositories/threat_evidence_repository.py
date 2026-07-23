@@ -6,6 +6,7 @@ from app.models.source import Source
 from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.threat_cve import ThreatCVE
+from app.models.threat_observation import ThreatObservation
 
 
 class ThreatEvidenceRepository:
@@ -18,6 +19,9 @@ class ThreatEvidenceRepository:
             .options(
                 joinedload(Threat.vendor),
                 selectinload(Threat.cve_links).joinedload(ThreatCVE.cve),
+                selectinload(Threat.observations).joinedload(
+                    ThreatObservation.source
+                ),
             )
             .where(Threat.ThreatId == threat_id)
         )

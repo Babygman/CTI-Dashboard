@@ -13,6 +13,7 @@ from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.vendor import Vendor
 from app.models.threat_cve import ThreatCVE
+from app.models.threat_observation import ThreatObservation
 from app.services.cve_service import CVEPersistenceService, normalize_cve_code
 from app.services.threat_detail import ThreatDetailService
 
@@ -149,6 +150,9 @@ def threat_list():
     statement = db.select(Threat).options(
         joinedload(Threat.vendor),
         selectinload(Threat.cve_links).joinedload(ThreatCVE.cve),
+        selectinload(Threat.observations).joinedload(
+            ThreatObservation.source
+        ),
     )
     if query:
         pattern = f"%{query}%"

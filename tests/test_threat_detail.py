@@ -263,7 +263,7 @@ class ThreatDetailRouteTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(statements), 7, statements)
+        self.assertEqual(len(statements), 8, statements)
 
     def test_missing_threat_returns_404(self):
         response = self.client.get("/threats/999999")

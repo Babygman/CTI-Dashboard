@@ -14,6 +14,8 @@ from app.models.source_item import SourceItem
 from app.models.threat import Threat
 from app.models.vendor import Vendor
 from app.services.cve_service import CVEPersistenceService
+from app.services.canonical_threats import CanonicalThreatService
+from app.services.threat_observations import ThreatObservationService
 
 from .base import BaseCollector
 from .deduplication import (
@@ -21,7 +23,6 @@ from .deduplication import (
     raw_content_hash,
     source_item_by_content_hash,
     source_item_by_external_id,
-    threat_by_identity,
 )
 from .normalizer import NormalizedItem
 
@@ -275,6 +276,13 @@ def _process_item(
                     item.cve_ids,
                     source=item.source_name,
                 )
+                ThreatObservationService.record(
+                    existing_external.threat,
+                    source,
+                    item,
+                    match_method="ExistingLink",
+                    confidence=1.0,
+                )
             _update_source_item(
                 existing_external,
                 collection_run_id,
@@ -286,8 +294,12 @@ def _process_item(
             return "skipped"
 
         threat = existing_external.threat
+        canonical_match = None
         if threat is None:
-            threat = threat_by_identity(item)
+            canonical_match = (
+                CanonicalThreatService.from_app_config().find(item)
+            )
+            threat = canonical_match.threat
         is_new = threat is None
         if threat is None:
             threat = Threat()
@@ -297,6 +309,21 @@ def _process_item(
         db.session.flush()
         CVEPersistenceService.sync_threat(
             threat, item.cve_ids, source=item.source_name
+        )
+        ThreatObservationService.record(
+            threat,
+            source,
+            item,
+            match_method=(
+                canonical_match.method
+                if canonical_match is not None
+                else "ExistingLink"
+            ),
+            confidence=(
+                canonical_match.confidence
+                if canonical_match is not None
+                else 1.0
+            ),
         )
         existing_external.ThreatId = threat.ThreatId
         _update_source_item(
@@ -316,6 +343,13 @@ def _process_item(
             item.cve_ids,
             source=item.source_name,
         )
+        ThreatObservationService.record(
+            duplicate_source_item.threat,
+            source,
+            item,
+            match_method="ContentHash",
+            confidence=1.0,
+        )
         db.session.add(
             _new_source_item(
                 source,
@@ -329,7 +363,8 @@ def _process_item(
         )
         return "skipped"
 
-    duplicate_threat = threat_by_identity(item)
+    canonical_match = CanonicalThreatService.from_app_config().find(item)
+    duplicate_threat = canonical_match.threat
     if duplicate_threat is not None:
         vendor = _vendor_for_item(item, duplicate_threat)
         _apply_threat_values(
@@ -339,6 +374,13 @@ def _process_item(
         CVEPersistenceService.sync_threat(
             duplicate_threat, item.cve_ids, source=item.source_name
         )
+        ThreatObservationService.record(
+            duplicate_threat,
+            source,
+            item,
+            match_method=canonical_match.method,
+            confidence=canonical_match.confidence,
+        )
         db.session.add(
             _new_source_item(
                 source,
@@ -347,7 +389,7 @@ def _process_item(
                 hash_value,
                 status="Processed",
                 threat=duplicate_threat,
-                match_method="CVE" if item.cve_ids else "Title",
+                match_method=canonical_match.method,
             )
         )
         return "updated"
@@ -359,6 +401,13 @@ def _process_item(
     db.session.flush()
     CVEPersistenceService.sync_threat(
         threat, item.cve_ids, source=item.source_name
+    )
+    ThreatObservationService.record(
+        threat,
+        source,
+        item,
+        match_method="Created",
+        confidence=1.0,
     )
     db.session.add(
         _new_source_item(

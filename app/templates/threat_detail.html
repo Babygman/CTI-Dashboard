@@ -27,6 +27,9 @@
             <span class="badge text-bg-light border text-dark">{{ cve }}</span>
             {% endif %}
             {% endfor %}
+            {% for source_name in detail.source_badges %}
+            <span class="badge text-bg-info">{{ source_name }}</span>
+            {% endfor %}
         </div>
     </div>
     <a class="btn btn-outline-primary"
@@ -64,6 +67,69 @@
             <div class="text-muted small">Affected Assets</div>
             <div class="fs-4 fw-semibold">{{ detail.impact.affected_asset_count }}</div>
         </div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Source Observations</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Title</th>
+                    <th>Published</th>
+                    <th>Observed</th>
+                    <th>Severity</th>
+                    <th>Match</th>
+                    <th>Original</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in detail.observations %}
+                {% set observation = row.observation %}
+                <tr>
+                    <td><span class="badge text-bg-info">{{ row.source_name }}</span></td>
+                    <td>{{ observation.Title }}</td>
+                    <td>{{ observation.PublishedDate or "Unknown" }}</td>
+                    <td>{{ observation.ObservedDate }}</td>
+                    <td>{{ observation.Severity or "Unspecified" }}</td>
+                    <td>
+                        {{ observation.MatchMethod }}
+                        <span class="text-muted">
+                            {{ "%.0f%%"|format(observation.MatchConfidence * 100) }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if row.source_url %}
+                        <a href="{{ row.source_url }}" target="_blank" rel="noopener noreferrer">Open</a>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No canonical observations are recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Published Timeline</div>
+    <div class="card-body">
+        <div class="list-group list-group-flush">
+            {% for row in detail.published_timeline %}
+            <div class="list-group-item px-0 d-flex justify-content-between">
+                <div>
+                    <span class="badge text-bg-info me-2">{{ row.source_name }}</span>
+                    {{ row.observation.Title }}
+                </div>
+                <span class="text-muted">{{ row.published_date or row.observed_date }}</span>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No publication timeline is available.</p>
+            {% endfor %}
+        </div>
     </div>
 </div>
 

@@ -110,7 +110,15 @@
                             No
                             {% endif %}
                         </td>
-                        <td>{{ threat.Source or '' }}</td>
+                        <td>
+                            {{ threat.Source or '' }}
+                            {% if threat.contributing_source_count %}
+                            <span class="badge text-bg-secondary">
+                                {{ threat.contributing_source_count }}
+                                source{% if threat.contributing_source_count != 1 %}s{% endif %}
+                            </span>
+                            {% endif %}
+                        </td>
                         <td class="text-nowrap">
                             <a href="{{ url_for('threats.edit_threat', threat_id=threat.ThreatId) }}"
                                class="btn btn-sm btn-outline-primary">Edit</a>

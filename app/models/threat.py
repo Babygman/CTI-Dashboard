@@ -43,6 +43,12 @@ class Threat(db.Model):
         cascade="all, delete-orphan",
         order_by="(ThreatCVE.IsPrimary.desc(), ThreatCVE.CVEId.asc())",
     )
+    observations = db.relationship(
+        "ThreatObservation",
+        back_populates="threat",
+        cascade="all, delete-orphan",
+        order_by="ThreatObservation.ObservedDate.asc()",
+    )
 
     @property
     def primary_cve(self):
@@ -61,3 +67,13 @@ class Threat(db.Model):
     @property
     def additional_cve_count(self):
         return max(len(self.cve_links) - 1, 0)
+
+    @property
+    def contributing_source_count(self):
+        return len(
+            {
+                observation.SourceId
+                for observation in self.observations
+                if observation.SourceId is not None
+            }
+        )

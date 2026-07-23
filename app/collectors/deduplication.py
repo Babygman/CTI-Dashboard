@@ -1,13 +1,9 @@
 import hashlib
 import json
 
-from sqlalchemy import func
-
 from app.extensions import db
 from app.models.source_item import SourceItem
-from app.models.threat import Threat
-from app.models.threat_cve import ThreatCVE
-from app.models.cve import CVE
+from app.services.canonical_threats import CanonicalThreatService
 
 from .normalizer import NormalizedItem
 
@@ -70,25 +66,4 @@ def source_item_by_content_hash(hash_value: str):
 
 
 def threat_by_identity(item: NormalizedItem):
-    if item.cve_ids:
-        statement = (
-            db.select(Threat)
-            .outerjoin(ThreatCVE, ThreatCVE.ThreatId == Threat.ThreatId)
-            .outerjoin(CVE, CVE.CVEId == ThreatCVE.CVEId)
-            .where(
-                db.or_(
-                    func.upper(Threat.CVE).in_(item.cve_ids),
-                    CVE.CVECode.in_(item.cve_ids),
-                )
-            )
-            .distinct()
-        )
-        matches = db.session.scalars(statement.limit(2)).all()
-        if len(matches) > 1:
-            raise ValueError(
-                f"ambiguous Threat match for CVEs: {', '.join(item.cve_ids)}"
-            )
-        return matches[0] if matches else None
-
-    statement = db.select(Threat).where(func.lower(Threat.Title) == item.title.lower())
-    return db.session.scalar(statement)
+    return CanonicalThreatService.from_app_config().find(item).threat

@@ -18,6 +18,14 @@ def _tcp_port(name, default):
     return value if value <= 65535 else default
 
 
+def _bounded_float(name, default, minimum, maximum):
+    try:
+        value = float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return value if minimum <= value <= maximum else default
+
+
 class Config:
 
     SECRET_KEY = os.getenv("SECRET_KEY", "ChangeThisSecretKey")
@@ -46,3 +54,9 @@ class Config:
         "CTI_WORKER_RETRY_INTERVAL_SECONDS", 300
     )
     CTI_WORKER_BATCH_SIZE = _positive_int("CTI_WORKER_BATCH_SIZE", 25)
+    CTI_CANONICAL_TITLE_SIMILARITY_THRESHOLD = _bounded_float(
+        "CTI_CANONICAL_TITLE_SIMILARITY_THRESHOLD", 0.88, 0.0, 1.0
+    )
+    CTI_CANONICAL_CANDIDATE_LIMIT = _positive_int(
+        "CTI_CANONICAL_CANDIDATE_LIMIT", 100
+    )

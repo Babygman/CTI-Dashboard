@@ -22,11 +22,12 @@ EXPECTED_TABLES = {
     "Sources",
     "SystemSettings",
     "ThreatCVEs",
+    "ThreatObservations",
     "Threats",
     "Vendors",
     "alembic_version",
 }
-EXPECTED_HEAD = "20260723_03"
+EXPECTED_HEAD = "20260723_04"
 
 
 def main():
