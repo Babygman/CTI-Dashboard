@@ -61,10 +61,32 @@ class PDFExporter:
         PDFExporter._ensure_thai_fonts()
         settings = PDFExporter._load_settings()
 
-        company_name = settings.get("CompanyName", "Company Name")
-        company_short_name = settings.get("CompanyShortName", "")
-        department = settings.get("Department", "IT Department")
-        classification = settings.get("Classification", "Internal Use")
+        company_name = PDFExporter._setting(
+            settings,
+            "CompanyName",
+            "DEFAULT_COMPANY_NAME",
+            "Sunstar Chemical (Thailand) Co., Ltd.",
+        )
+        company_short_name = PDFExporter._setting(
+            settings,
+            "CompanyShortName",
+            "DEFAULT_COMPANY_SHORT_NAME",
+            "SUNSTAR",
+        )
+        department = PDFExporter._setting(
+            settings,
+            "Department",
+            "DEFAULT_DEPARTMENT",
+            "Information Technology Department",
+        )
+        classification = PDFExporter._localized_classification(
+            PDFExporter._setting(
+                settings,
+                "Classification",
+                "DEFAULT_CLASSIFICATION",
+                "ใช้ภายในองค์กร",
+            )
+        )
         paper_size = settings.get("PaperSize", "A4")
         company_logo = settings.get("CompanyLogo", "")
 
@@ -93,15 +115,15 @@ class PDFExporter:
             topMargin=3.5 * cm,
             bottomMargin=2.8 * cm,
             title=(
-                "Cyber Security Advisory - "
-                f"{threat.get('CVE') or 'Unknown'}"
+                "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์ - "
+                f"{threat.get('CVE') or 'ไม่ระบุ CVE'}"
             ),
-            author=department or "IT Department",
+            author=department,
             subject=(
                 threat.get("Title")
-                or "Cyber Security Advisory"
+                or "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์"
             ),
-            creator="CTI Platform",
+            creator=f"{company_name} Awareness Platform",
         )
 
         styles = PDFExporter._build_styles(
@@ -123,19 +145,21 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "Cyber Security Advisory",
+                "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
                 styles["title"],
             )
         )
 
-        cve = threat.get("CVE") or "No CVE assigned"
-        severity = threat.get("Severity") or "Unknown"
+        cve = threat.get("CVE") or "ไม่ระบุ CVE"
+        severity = PDFExporter._localized_severity(
+            threat.get("Severity")
+        )
 
         story.append(
             Paragraph(
                 (
                     f"{PDFExporter._escape(cve)} | "
-                    f"Severity: {PDFExporter._escape(severity)}"
+                    f"ระดับความรุนแรง: {PDFExporter._escape(severity)}"
                 ),
                 styles["subtitle"],
             )
@@ -153,10 +177,10 @@ class PDFExporter:
 
         story.extend(
             PDFExporter._content_section(
-                heading="Executive Summary",
+                heading="สรุปเหตุการณ์",
                 content=(
                     executive_summary
-                    or "No executive summary available."
+                    or "ไม่มีข้อมูลสรุปเหตุการณ์"
                 ),
                 width=document.width,
                 primary_color=primary_color,
@@ -175,10 +199,10 @@ class PDFExporter:
 
         story.extend(
             PDFExporter._content_section(
-                heading="IT Recommendation",
+                heading="คำแนะนำจากฝ่าย IT",
                 content=(
                     it_recommendation
-                    or "No IT recommendation available."
+                    or "ไม่มีคำแนะนำจากฝ่าย IT"
                 ),
                 width=document.width,
                 primary_color=primary_color,
@@ -233,6 +257,31 @@ class PDFExporter:
             setting.SettingKey: setting.SettingValue or ""
             for setting in settings
         }
+
+    @staticmethod
+    def _setting(settings, setting_key, config_key, default):
+        value = str(settings.get(setting_key) or "").strip()
+        if value:
+            return value
+        return str(current_app.config.get(config_key, default) or default).strip()
+
+    @staticmethod
+    def _localized_classification(value):
+        return {
+            "Internal Use": "ใช้ภายในองค์กร",
+            "Confidential": "ข้อมูลลับ",
+            "Public": "เผยแพร่สาธารณะ",
+        }.get(str(value or "").strip(), str(value or "ใช้ภายในองค์กร"))
+
+    @staticmethod
+    def _localized_severity(value):
+        return {
+            "Critical": "วิกฤต",
+            "High": "สูง",
+            "Medium": "ปานกลาง",
+            "Low": "ต่ำ",
+            "Informational": "ข้อมูลทั่วไป",
+        }.get(str(value or "").strip(), str(value or "ไม่ทราบระดับ"))
 
     @staticmethod
     def _build_styles(primary_color, secondary_color):
@@ -341,7 +390,7 @@ class PDFExporter:
         table = Table(
             [[Paragraph(
                 PDFExporter._escape(
-                    str(classification or "Internal Use").upper()
+                    str(classification or "ใช้ภายในองค์กร")
                 ),
                 styles["banner"],
             )]],
@@ -391,24 +440,27 @@ class PDFExporter:
         styles,
     ):
         heading = PDFExporter._section_heading(
-            "Threat Information",
+            "ข้อมูลภัยคุกคาม",
             width,
             primary_color,
             styles,
         )
 
         rows = [
-            ("Title", threat.get("Title") or "N/A"),
-            ("CVE", threat.get("CVE") or "N/A"),
-            ("Severity", threat.get("Severity") or "N/A"),
-            ("CVSS", threat.get("CVSS") or "N/A"),
+            ("หัวข้อ", threat.get("Title") or "ไม่ระบุ"),
+            ("CVE", threat.get("CVE") or "ไม่ระบุ"),
             (
-                "Known Exploited Vulnerability",
-                "Yes" if threat.get("KEV") else "No",
+                "ระดับความรุนแรง",
+                PDFExporter._localized_severity(threat.get("Severity")),
             ),
-            ("Source", threat.get("Source") or "N/A"),
+            ("CVSS", threat.get("CVSS") or "ไม่ระบุ"),
             (
-                "Published Date",
+                "ช่องโหว่ที่มีการโจมตีแล้ว",
+                "ใช่" if threat.get("KEV") else "ไม่ใช่",
+            ),
+            ("แหล่งข้อมูล", threat.get("Source") or "ไม่ระบุ"),
+            (
+                "วันที่เผยแพร่",
                 PDFExporter._format_date(
                     threat.get("PublishedDate")
                 ),
@@ -502,7 +554,7 @@ class PDFExporter:
     ):
         elements = [
             PDFExporter._section_heading(
-                "Business Impact",
+                "ผลกระทบ",
                 width,
                 primary_color,
                 styles,
@@ -524,7 +576,7 @@ class PDFExporter:
         else:
             elements.append(
                 Paragraph(
-                    "No business impact information available.",
+                    "ไม่มีข้อมูลผลกระทบ",
                     styles["body"],
                 )
             )
@@ -540,7 +592,7 @@ class PDFExporter:
     ):
         reference_url = (
             threat.get("ReferenceUrl")
-            or "No reference URL available."
+            or "ไม่มีแหล่งอ้างอิง"
         )
 
         safe_reference = PDFExporter._escape(reference_url)
@@ -555,7 +607,7 @@ class PDFExporter:
 
         return [
             PDFExporter._section_heading(
-                "Source Reference",
+                "แหล่งอ้างอิง",
                 width,
                 primary_color,
                 styles,
@@ -564,8 +616,8 @@ class PDFExporter:
             Paragraph(source_content, styles["source"]),
             Paragraph(
                 (
-                    "Generated: "
-                    f"{datetime.now().strftime('%d %b %Y %H:%M')}"
+                    "วันที่สร้างเอกสาร: "
+                    f"{datetime.now().strftime('%d %b %Y')}"
                 ),
                 styles["generated"],
             ),
@@ -625,27 +677,27 @@ class PDFExporter:
 
         if not logo_drawn:
             canvas.setFillColor(primary_color)
-            canvas.setFont("Helvetica-Bold", 18)
+            canvas.setFont(PDFExporter.FONT_BOLD, 18)
             canvas.drawString(
                 left_x,
                 top_y - 0.65 * cm,
-                str(company_short_name or "CTI"),
+                str(company_short_name or "SUNSTAR"),
             )
 
         canvas.setFillColor(primary_color)
-        canvas.setFont("Helvetica-Bold", 11)
+        canvas.setFont(PDFExporter.FONT_BOLD, 11)
         canvas.drawRightString(
             right_x,
             top_y - 0.2 * cm,
-            str(company_name or "Company Name"),
+            str(company_name or "Sunstar Chemical (Thailand) Co., Ltd."),
         )
 
         canvas.setFillColor(colors.black)
-        canvas.setFont("Helvetica", 9)
+        canvas.setFont(PDFExporter.FONT, 9)
         canvas.drawRightString(
             right_x,
             top_y - 0.65 * cm,
-            str(department or "IT Department"),
+            str(department or "Information Technology Department"),
         )
 
         header_line_y = page_height - 2.55 * cm
@@ -659,30 +711,30 @@ class PDFExporter:
         canvas.line(left_x, footer_line_y, right_x, footer_line_y)
 
         canvas.setFillColor(secondary_color)
-        canvas.setFont("Helvetica", 8)
+        canvas.setFont(PDFExporter.FONT, 8)
 
         canvas.drawString(
             left_x,
             1.5 * cm,
-            str(company_name or "Company Name"),
+            str(company_name or "Sunstar Chemical (Thailand) Co., Ltd."),
         )
 
         canvas.drawCentredString(
             page_width / 2,
             1.5 * cm,
-            str(classification or "Internal Use"),
+            str(classification or "ใช้ภายในองค์กร"),
         )
 
         canvas.drawRightString(
             right_x,
             1.5 * cm,
-            f"Page {doc.page}",
+            f"หน้า {doc.page}",
         )
 
         canvas.drawCentredString(
             page_width / 2,
             1.1 * cm,
-            "Generated by CTI Platform",
+            f"สร้างโดย {department or 'Information Technology Department'}",
         )
 
         canvas.restoreState()
@@ -778,12 +830,18 @@ class PDFExporter:
     @staticmethod
     def _format_date(value):
         if value is None:
-            return "N/A"
+            return "ไม่ระบุ"
 
         if hasattr(value, "strftime"):
             return value.strftime("%d %b %Y")
 
-        return str(value)
+        raw_value = str(value).strip()
+        try:
+            return datetime.fromisoformat(
+                raw_value.replace("Z", "+00:00")
+            ).strftime("%d %b %Y")
+        except ValueError:
+            return raw_value.split(".")[0]
 
     @staticmethod
     def _is_valid_web_url(value):
@@ -814,4 +872,4 @@ class PDFExporter:
         ]:
             safe_value = safe_value.replace(character, "-")
 
-        return safe_value.strip() or "Unknown"
+        return safe_value.strip() or "ไม่ระบุ"

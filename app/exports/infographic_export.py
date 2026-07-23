@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 
+from flask import current_app, has_app_context
 from PIL import Image, ImageDraw, ImageFont
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.models.system_setting import SystemSetting
 
 
 class InfographicExporter:
@@ -24,6 +29,8 @@ class InfographicExporter:
     TEXT = "#1E293B"
     MUTED = "#64748B"
     BORDER = "#D8E1EA"
+    DEFAULT_COMPANY_NAME = "Sunstar Chemical (Thailand) Co., Ltd."
+    DEFAULT_DEPARTMENT = "Information Technology Department"
 
     @classmethod
     def _font(cls, size: int, bold: bool = False):
@@ -172,6 +179,55 @@ class InfographicExporter:
         return cls.MUTED, "#E9EEF4"
 
     @classmethod
+    def _settings(cls):
+        defaults = {
+            "CompanyName": cls.DEFAULT_COMPANY_NAME,
+            "Department": cls.DEFAULT_DEPARTMENT,
+        }
+        if not has_app_context():
+            return defaults
+        defaults["CompanyName"] = current_app.config.get(
+            "DEFAULT_COMPANY_NAME", cls.DEFAULT_COMPANY_NAME
+        )
+        defaults["Department"] = current_app.config.get(
+            "DEFAULT_DEPARTMENT", cls.DEFAULT_DEPARTMENT
+        )
+        try:
+            configured = {
+                setting.SettingKey: setting.SettingValue
+                for setting in SystemSetting.query.filter_by(IsActive=True).all()
+                if setting.SettingValue
+            }
+        except SQLAlchemyError:
+            configured = {}
+        defaults.update(configured)
+        return defaults
+
+    @staticmethod
+    def _localized_severity(value):
+        return {
+            "Critical": "วิกฤต",
+            "High": "สูง",
+            "Medium": "ปานกลาง",
+            "Low": "ต่ำ",
+            "Informational": "ข้อมูลทั่วไป",
+        }.get(str(value or "").strip(), str(value or "ข้อมูลทั่วไป"))
+
+    @staticmethod
+    def _format_date(value):
+        if value is None:
+            return "ไม่ระบุ"
+        if hasattr(value, "strftime"):
+            return value.strftime("%d %b %Y")
+        raw_value = str(value).strip()
+        try:
+            return datetime.fromisoformat(
+                raw_value.replace("Z", "+00:00")
+            ).strftime("%d %b %Y")
+        except ValueError:
+            return raw_value.split(".")[0]
+
+    @classmethod
     def _draw_bullets(cls, draw, items, box, accent):
         x1, y1, x2, _ = box
         item_height = 108
@@ -190,6 +246,8 @@ class InfographicExporter:
 
     @classmethod
     def generate(cls, threat: dict[str, Any], infographic_content: dict[str, Any]):
+        settings = cls._settings()
+        company_name = settings["CompanyName"]
         image = Image.new("RGB", (cls.WIDTH, cls.HEIGHT), cls.BG)
         draw = ImageDraw.Draw(image)
         margin = 70
@@ -198,7 +256,7 @@ class InfographicExporter:
 
         headline = cls._safe(
             infographic_content.get("headline"),
-            "Cyber Security Alert",
+            "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
         )
         actions = list(infographic_content.get("actions") or [])[:3]
         avoid = list(infographic_content.get("avoid") or [])[:3]
@@ -206,7 +264,7 @@ class InfographicExporter:
         draw.rectangle((0, 0, cls.WIDTH, 290), fill=cls.NAVY)
         draw.text(
             (margin, 42),
-            "CYBER SECURITY AWARENESS",
+            company_name,
             font=cls._font(31, True),
             fill=cls.LIGHT_BLUE,
         )
@@ -221,7 +279,10 @@ class InfographicExporter:
         )
         cls._draw_wrapped(
             draw,
-            cls._safe(threat.get("Title"), "Security advisory"),
+            cls._safe(
+                threat.get("Title"),
+                "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
+            ),
             (margin, 232, right - 20, 274),
             cls._font(22),
             cls.LIGHT_BLUE,
@@ -229,13 +290,13 @@ class InfographicExporter:
             max_lines=1,
         )
 
-        severity = cls._safe(threat.get("Severity"), "Information")
+        severity = cls._localized_severity(threat.get("Severity"))
         severity_color, severity_bg = cls._severity_style(severity)
         badge = (right - 205, 100, right, 169)
         cls._box(draw, badge, severity_bg, radius=22)
         cls._draw_wrapped(
             draw,
-            severity.upper(),
+            severity,
             (badge[0] + 18, badge[1] + 18, badge[2] - 18, badge[3] - 10),
             cls._font(25, True),
             severity_color,
@@ -247,7 +308,7 @@ class InfographicExporter:
         meta_font = cls._font(23)
         cls._draw_wrapped(
             draw,
-            f"Source: {cls._safe(threat.get('Source'))}",
+            f"แหล่งข้อมูล: {cls._safe(threat.get('Source'))}",
             (margin + 28, meta_y + 19, margin + 560, meta_y + 52),
             meta_font,
             cls.TEXT,
@@ -255,7 +316,7 @@ class InfographicExporter:
         )
         cls._draw_wrapped(
             draw,
-            f"Published: {cls._safe(threat.get('PublishedDate'))}",
+            f"วันที่เผยแพร่: {cls._format_date(threat.get('PublishedDate'))}",
             (margin + 28, meta_y + 58, margin + 560, meta_y + 91),
             meta_font,
             cls.MUTED,
@@ -352,13 +413,13 @@ class InfographicExporter:
         draw.line((margin, reference_y, right, reference_y), fill=cls.BORDER, width=2)
         draw.text(
             (margin, reference_y + 18),
-            "Reference:",
+            "อ้างอิง:",
             font=cls._font(21, True),
             fill=cls.MUTED,
         )
         cls._draw_wrapped(
             draw,
-            cls._safe(threat.get("ReferenceUrl"), "No reference provided"),
+            cls._safe(threat.get("ReferenceUrl"), "ไม่มีแหล่งอ้างอิง"),
             (margin + 125, reference_y + 18, right, cls.HEIGHT - 34),
             cls._font(20),
             cls.MUTED,

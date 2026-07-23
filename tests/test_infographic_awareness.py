@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from io import BytesIO
 from unittest.mock import patch
 
@@ -6,6 +7,7 @@ from PIL import Image, ImageDraw
 
 from app import create_app
 from app.exports.infographic_export import InfographicExporter
+from app.exports.pdf_export import PDFExporter
 from app.services.awareness_service import AwarenessGenerator
 
 
@@ -45,19 +47,19 @@ class InfographicAwarenessContentTests(unittest.TestCase):
         self.assertTrue(content["why_it_matters"])
         self.assertEqual(len(content["actions"]), 3)
         self.assertEqual(len(content["avoid"]), 3)
-        self.assertIn("IT", content["contact_it"])
+        self.assertIn("ฝ่าย IT", content["contact_it"])
         self.assertTrue(all(isinstance(item, str) for item in content["actions"]))
         self.assertTrue(all(isinstance(item, str) for item in content["avoid"]))
 
     def test_headlines_are_short_and_specific_to_the_threat(self):
         cases = (
-            ({"Title": "Microsoft Edge security update"}, "Microsoft Edge Security Update"),
-            ({"Title": "Windows vulnerability", "CVE": "CVE-2026-1000"}, "Windows Security Update"),
-            ({"Title": "Critical vulnerability", "CVE": "CVE-2026-1001"}, "Critical Security Update"),
-            ({"Title": "Phishing campaign targeting employees"}, "Beware of Phishing"),
-            ({"Title": "Ransomware activity detected"}, "Ransomware Alert"),
-            ({"Title": "New malware delivery campaign"}, "Malware Detected"),
-            ({"Title": "General security notice"}, "Security Advisory"),
+            ({"Title": "Microsoft Edge security update"}, "อัปเดตความปลอดภัย Microsoft Edge"),
+            ({"Title": "Windows vulnerability", "CVE": "CVE-2026-1000"}, "อัปเดตความปลอดภัย Windows"),
+            ({"Title": "Critical vulnerability", "CVE": "CVE-2026-1001"}, "ประกาศอัปเดตความปลอดภัยเร่งด่วน"),
+            ({"Title": "Phishing campaign targeting employees"}, "ระวังการหลอกลวงทางออนไลน์"),
+            ({"Title": "Ransomware activity detected"}, "แจ้งเตือนภัยแรนซัมแวร์"),
+            ({"Title": "New malware delivery campaign"}, "ตรวจพบความเสี่ยงจากมัลแวร์"),
+            ({"Title": "General security notice"}, "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์"),
         )
 
         for threat, expected_headline in cases:
@@ -67,10 +69,10 @@ class InfographicAwarenessContentTests(unittest.TestCase):
 
     def test_known_vendor_or_product_is_used_in_relevant_headline(self):
         cases = (
-            ({"Title": "Chrome vulnerability", "CVE": "CVE-2026-2000"}, "Google Chrome Security Update"),
-            ({"Title": "Adobe patch advisory"}, "Adobe Security Update"),
-            ({"Title": "Cisco security notice"}, "Cisco Security Advisory"),
-            ({"Title": "ESXi security update"}, "VMware Security Update"),
+            ({"Title": "Chrome vulnerability", "CVE": "CVE-2026-2000"}, "อัปเดตความปลอดภัย Google Chrome"),
+            ({"Title": "Adobe patch advisory"}, "อัปเดตความปลอดภัย Adobe"),
+            ({"Title": "Cisco security notice"}, "ประกาศความปลอดภัย Cisco"),
+            ({"Title": "ESXi security update"}, "อัปเดตความปลอดภัย VMware"),
         )
 
         for threat, expected_headline in cases:
@@ -86,7 +88,7 @@ class InfographicAwarenessContentTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("security weakness has been reported", content["what_happened"])
+        self.assertIn("พบช่องโหว่ด้านความปลอดภัย", content["what_happened"])
         self.assertIn("Microsoft Edge", content["what_happened"])
         self.assertIn("CVE-2026-3000", content["what_happened"])
         for system_term in ("deployment", "remediation", "technical workarounds"):
@@ -123,6 +125,21 @@ class InfographicExporterTests(unittest.TestCase):
             self.assertEqual(image.format, "PNG")
             self.assertEqual(image.size, (1240, 1754))
         self.assertTrue(filename.endswith(".png"))
+
+    def test_dates_remove_time_and_microseconds(self):
+        published = datetime(2026, 7, 24, 12, 34, 56, 789123)
+        self.assertEqual(
+            InfographicExporter._format_date(published),
+            "24 Jul 2026",
+        )
+        self.assertEqual(
+            PDFExporter._format_date("2026-07-24 12:34:56.789123"),
+            "24 Jul 2026",
+        )
+
+    def test_export_labels_localize_severity(self):
+        self.assertEqual(InfographicExporter._localized_severity("High"), "สูง")
+        self.assertEqual(PDFExporter._localized_severity("Critical"), "วิกฤต")
 
     def test_lists_are_not_stringified_with_python_syntax(self):
         rendered = InfographicExporter._safe(["First action", "Second action"])

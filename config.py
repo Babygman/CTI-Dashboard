@@ -36,6 +36,23 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    DEFAULT_COMPANY_NAME = os.getenv(
+        "DEFAULT_COMPANY_NAME",
+        "Sunstar Chemical (Thailand) Co., Ltd.",
+    )
+    DEFAULT_COMPANY_SHORT_NAME = os.getenv(
+        "DEFAULT_COMPANY_SHORT_NAME",
+        "SUNSTAR",
+    )
+    DEFAULT_DEPARTMENT = os.getenv(
+        "DEFAULT_DEPARTMENT",
+        "Information Technology Department",
+    )
+    DEFAULT_CLASSIFICATION = os.getenv(
+        "DEFAULT_CLASSIFICATION",
+        "ใช้ภายในองค์กร",
+    )
+
     OPERATIONS_DASHBOARD_THREAT_LIMIT = _positive_int(
         "OPERATIONS_DASHBOARD_THREAT_LIMIT", 100
     )

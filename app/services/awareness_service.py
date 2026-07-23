@@ -16,93 +16,93 @@ class AwarenessGenerator:
 
     _INFOGRAPHIC_CONTENT = {
         "vulnerability": {
-            "headline": "Critical Security Update",
-            "what_happened": "A security weakness has been reported{identifier}. The alert concerns {subject}.",
-            "why_it_matters": "Attackers could use this weakness to access information, interrupt work, or take control of a device.",
+            "headline": "ประกาศอัปเดตความปลอดภัยเร่งด่วน",
+            "what_happened": "พบช่องโหว่ด้านความปลอดภัย{identifier} ซึ่งเกี่ยวข้องกับ {subject}",
+            "why_it_matters": "ผู้ไม่หวังดีอาจใช้ช่องโหว่นี้เพื่อเข้าถึงข้อมูล รบกวนการทำงาน หรือควบคุมอุปกรณ์",
             "actions": [
-                "Install the company-approved update when prompted.",
-                "Save your work and restart your device if asked.",
-                "Tell IT immediately if your device behaves unusually.",
+                "ติดตั้งอัปเดตที่บริษัทอนุมัติเมื่อได้รับแจ้ง",
+                "บันทึกงานและรีสตาร์ตอุปกรณ์เมื่อได้รับคำแนะนำ",
+                "แจ้งฝ่าย IT ทันทีหากอุปกรณ์ทำงานผิดปกติ",
             ],
             "avoid": [
-                "Do not keep postponing an approved security update.",
-                "Do not download updates from emails or unofficial websites.",
-                "Do not try to fix the issue yourself.",
+                "ห้ามเลื่อนการติดตั้งอัปเดตที่ได้รับอนุมัติซ้ำ ๆ",
+                "ห้ามดาวน์โหลดอัปเดตจากอีเมลหรือเว็บไซต์ที่ไม่เป็นทางการ",
+                "ห้ามพยายามแก้ไขปัญหาด้วยตนเอง",
             ],
         },
         "patch_advisory": {
-            "headline": "Critical Security Update",
-            "what_happened": "A security update is available for {subject}. You may be asked to update or restart your device.",
-            "why_it_matters": "Updating promptly helps prevent attackers from using a known security gap.",
+            "headline": "ประกาศอัปเดตความปลอดภัยเร่งด่วน",
+            "what_happened": "มีอัปเดตความปลอดภัยสำหรับ {subject} ผู้ใช้อาจได้รับแจ้งให้อัปเดตหรือรีสตาร์ตอุปกรณ์",
+            "why_it_matters": "การอัปเดตโดยเร็วช่วยป้องกันผู้ไม่หวังดีจากการใช้ช่องโหว่ที่ทราบแล้ว",
             "actions": [
-                "Save your work when an update notification appears.",
-                "Let the company-approved update finish.",
-                "Restart your device when IT asks you to.",
+                "บันทึกงานเมื่อมีการแจ้งเตือนให้อัปเดต",
+                "รอให้อัปเดตที่บริษัทอนุมัติดำเนินการจนเสร็จ",
+                "รีสตาร์ตอุปกรณ์เมื่อฝ่าย IT แจ้งให้ดำเนินการ",
             ],
             "avoid": [
-                "Do not cancel or repeatedly postpone the update.",
-                "Do not download updates from pop-ups or email links.",
-                "Do not power off your device during installation.",
+                "ห้ามยกเลิกหรือเลื่อนการอัปเดตซ้ำ ๆ",
+                "ห้ามดาวน์โหลดอัปเดตจากป๊อปอัปหรือลิงก์ในอีเมล",
+                "ห้ามปิดอุปกรณ์ระหว่างการติดตั้ง",
             ],
         },
         "phishing": {
-            "headline": "Beware of Phishing",
-            "what_happened": "Fake messages are trying to trick people into clicking, opening files, or sharing information. The alert concerns {subject}.",
-            "why_it_matters": "One click or reply could expose passwords, company information, or access to company systems.",
+            "headline": "ระวังการหลอกลวงทางออนไลน์",
+            "what_happened": "พบข้อความปลอมที่หลอกให้คลิกลิงก์ เปิดไฟล์ หรือเปิดเผยข้อมูล ซึ่งเกี่ยวข้องกับ {subject}",
+            "why_it_matters": "การคลิกหรือตอบกลับเพียงครั้งเดียวอาจทำให้รหัสผ่าน ข้อมูลบริษัท หรือสิทธิ์เข้าถึงระบบรั่วไหล",
             "actions": [
-                "Check the sender and message context carefully.",
-                "Use the approved reporting option for suspicious messages.",
-                "Contact IT through a known channel if uncertain.",
+                "ตรวจสอบผู้ส่งและบริบทของข้อความอย่างรอบคอบ",
+                "รายงานข้อความน่าสงสัยผ่านช่องทางที่บริษัทกำหนด",
+                "ติดต่อฝ่าย IT ผ่านช่องทางที่ทราบแน่ชัดเมื่อไม่มั่นใจ",
             ],
             "avoid": [
-                "Do not click unexpected links or open unknown attachments.",
-                "Do not share passwords or verification codes.",
-                "Do not reply to confirm whether a message is genuine.",
+                "ห้ามคลิกลิงก์ที่ไม่คาดคิดหรือเปิดไฟล์แนบที่ไม่รู้จัก",
+                "ห้ามเปิดเผยรหัสผ่านหรือรหัสยืนยัน",
+                "ห้ามตอบกลับข้อความเพื่อตรวจสอบว่าเป็นของจริงหรือไม่",
             ],
         },
         "malware": {
-            "headline": "Malware Detected",
-            "what_happened": "Harmful software may be spreading through unsafe files, links, websites, or unapproved apps. The alert concerns {subject}.",
-            "why_it_matters": "Malware can steal information, damage files, monitor activity, or spread to other company systems.",
+            "headline": "ตรวจพบความเสี่ยงจากมัลแวร์",
+            "what_happened": "ซอฟต์แวร์อันตรายอาจแพร่ผ่านไฟล์ ลิงก์ เว็บไซต์ หรือแอปที่ไม่ได้รับอนุมัติ ซึ่งเกี่ยวข้องกับ {subject}",
+            "why_it_matters": "มัลแวร์สามารถขโมยข้อมูล ทำลายไฟล์ ติดตามกิจกรรม หรือแพร่ไปยังระบบอื่นของบริษัท",
             "actions": [
-                "Use only company-approved software and websites.",
-                "Keep your device connected for security updates.",
-                "Report security warnings or unusual behaviour immediately.",
+                "ใช้เฉพาะซอฟต์แวร์และเว็บไซต์ที่บริษัทอนุมัติ",
+                "เชื่อมต่ออุปกรณ์ไว้เพื่อรับอัปเดตความปลอดภัย",
+                "รายงานคำเตือนหรือการทำงานผิดปกติทันที",
             ],
             "avoid": [
-                "Do not run unexpected files or enable unknown macros.",
-                "Do not bypass browser or antivirus warnings.",
-                "Do not connect unapproved USB devices.",
+                "ห้ามเปิดไฟล์ที่ไม่คาดคิดหรือเปิดใช้มาโครที่ไม่รู้จัก",
+                "ห้ามข้ามคำเตือนจากเบราว์เซอร์หรือโปรแกรมป้องกันไวรัส",
+                "ห้ามเชื่อมต่ออุปกรณ์ USB ที่ไม่ได้รับอนุมัติ",
             ],
         },
         "ransomware": {
-            "headline": "Ransomware Alert",
-            "what_happened": "Ransomware may lock files or block access to systems and demand payment. The alert concerns {subject}.",
-            "why_it_matters": "Ransomware can stop business operations and put company or customer information at risk.",
+            "headline": "แจ้งเตือนภัยแรนซัมแวร์",
+            "what_happened": "แรนซัมแวร์อาจล็อกไฟล์หรือระบบและเรียกค่าไถ่ ซึ่งเกี่ยวข้องกับ {subject}",
+            "why_it_matters": "แรนซัมแวร์อาจหยุดการดำเนินธุรกิจและทำให้ข้อมูลบริษัทหรือลูกค้าตกอยู่ในความเสี่ยง",
             "actions": [
-                "Report suspicious messages and files immediately.",
-                "Keep important work in approved company storage.",
-                "Disconnect from the network and call IT if files change unexpectedly.",
+                "รายงานข้อความและไฟล์น่าสงสัยทันที",
+                "จัดเก็บงานสำคัญในพื้นที่จัดเก็บที่บริษัทอนุมัติ",
+                "ตัดการเชื่อมต่อเครือข่ายและโทรหาฝ่าย IT หากไฟล์เปลี่ยนแปลงผิดปกติ",
             ],
             "avoid": [
-                "Do not open unexpected attachments or downloads.",
-                "Do not reconnect an affected device without IT approval.",
-                "Do not contact attackers or attempt payment.",
+                "ห้ามเปิดไฟล์แนบหรือไฟล์ดาวน์โหลดที่ไม่คาดคิด",
+                "ห้ามเชื่อมต่ออุปกรณ์ที่ได้รับผลกระทบกลับเข้าระบบโดยไม่ได้รับอนุมัติ",
+                "ห้ามติดต่อผู้โจมตีหรือพยายามชำระเงิน",
             ],
         },
         "general_advisory": {
-            "headline": "Security Advisory",
-            "what_happened": "A security alert has been issued for {subject}. Follow any instructions shared through an official company channel.",
-            "why_it_matters": "Staying alert helps protect company information and prevents avoidable disruption.",
+            "headline": "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
+            "what_happened": "มีประกาศแจ้งเตือนด้านความปลอดภัยสำหรับ {subject} โปรดปฏิบัติตามคำแนะนำจากช่องทางทางการของบริษัท",
+            "why_it_matters": "การเฝ้าระวังช่วยปกป้องข้อมูลบริษัทและลดความขัดข้องที่สามารถป้องกันได้",
             "actions": [
-                "Follow instructions sent through official company channels.",
-                "Keep company devices updated and protected.",
-                "Report anything unusual to IT promptly.",
+                "ปฏิบัติตามคำแนะนำจากช่องทางทางการของบริษัท",
+                "อัปเดตและปกป้องอุปกรณ์ของบริษัทอยู่เสมอ",
+                "รายงานสิ่งผิดปกติให้ฝ่าย IT โดยเร็ว",
             ],
             "avoid": [
-                "Do not act on unverified security messages.",
-                "Do not share confidential information unnecessarily.",
-                "Do not bypass company security controls.",
+                "ห้ามดำเนินการตามข้อความเตือนที่ยังไม่ผ่านการตรวจสอบ",
+                "ห้ามเปิดเผยข้อมูลลับโดยไม่จำเป็น",
+                "ห้ามข้ามมาตรการควบคุมความปลอดภัยของบริษัท",
             ],
         },
     }
@@ -163,9 +163,9 @@ class AwarenessGenerator:
         if not subject_name:
             return default
         if threat_type in {"vulnerability", "patch_advisory"}:
-            return f"{subject_name} Security Update"
+            return f"อัปเดตความปลอดภัย {subject_name}"
         if threat_type == "general_advisory":
-            return f"{subject_name} Security Advisory"
+            return f"ประกาศความปลอดภัย {subject_name}"
         return default
 
     @classmethod
@@ -173,7 +173,7 @@ class AwarenessGenerator:
         """Build concise employee-awareness copy for the PNG infographic."""
         threat_type = cls._infographic_threat_type(threat)
         content = cls._INFOGRAPHIC_CONTENT[threat_type]
-        subject = cls._short_text(threat.get("Title"), maximum=90) or "the reported issue"
+        subject = cls._short_text(threat.get("Title"), maximum=90) or "เหตุการณ์ที่ได้รับรายงาน"
         cve = cls._short_text(threat.get("CVE"), maximum=30)
         identifier = f" ({cve})" if cve else ""
         return {
@@ -186,27 +186,36 @@ class AwarenessGenerator:
             "actions": list(content["actions"]),
             "avoid": list(content["avoid"]),
             "contact_it": (
-                "If you notice anything suspicious, stop and contact the IT "
-                "Department through an approved company channel."
+                "หากพบสิ่งผิดปกติ ให้หยุดดำเนินการและติดต่อฝ่าย IT "
+                "ผ่านช่องทางที่บริษัทกำหนดทันที"
             ),
         }
 
     @staticmethod
     def executive_summary(threat):
-        severity = threat.get("Severity", "Unknown")
+        severity = {
+            "Critical": "วิกฤต",
+            "High": "สูง",
+            "Medium": "ปานกลาง",
+            "Low": "ต่ำ",
+            "Informational": "ข้อมูลทั่วไป",
+        }.get(
+            str(threat.get("Severity") or "").strip(),
+            str(threat.get("Severity") or "ไม่ทราบระดับ"),
+        )
         title = threat.get("Title", "")
         cve = threat.get("CVE", "")
         cvss = threat.get("CVSS")
         source = threat.get("Source", "")
 
         summary = (
-            f"A {severity} cybersecurity vulnerability has been identified.\n\n"
-            f"Threat : {title}\n"
+            f"พบเหตุการณ์ด้านความมั่นคงปลอดภัยไซเบอร์ ระดับ {severity}\n\n"
+            f"เหตุการณ์ : {title}\n"
             f"CVE : {cve}\n"
             f"CVSS : {cvss}\n"
-            f"Source : {source}\n\n"
-            f"This issue should be reviewed by the IT Department to determine "
-            f"whether company assets are affected."
+            f"แหล่งข้อมูล : {source}\n\n"
+            f"ฝ่าย IT ควรตรวจสอบเหตุการณ์นี้เพื่อพิจารณาว่า "
+            f"ทรัพย์สินของบริษัทได้รับผลกระทบหรือไม่"
         )
 
         return summary
@@ -218,29 +227,29 @@ class AwarenessGenerator:
 
         if severity == "critical":
             return [
-                "Remote Code Execution may be possible.",
-                "Production services could be interrupted.",
-                "Immediate remediation is recommended.",
-                "Executive visibility is required."
+                "อาจเกิดการสั่งรันโค้ดจากระยะไกล",
+                "บริการในระบบผลิตอาจหยุดชะงัก",
+                "ควรดำเนินการแก้ไขทันที",
+                "ควรรายงานให้ผู้บริหารรับทราบ"
             ]
 
         if severity == "high":
             return [
-                "High operational risk.",
-                "Patch affected systems quickly.",
-                "Monitor for exploitation."
+                "มีความเสี่ยงสูงต่อการดำเนินงาน",
+                "ควรอัปเดตระบบที่ได้รับผลกระทบโดยเร็ว",
+                "เฝ้าระวังการโจมตีที่ใช้ช่องโหว่นี้"
             ]
 
         if severity == "medium":
             return [
-                "Limited operational impact.",
-                "Schedule patch deployment.",
-                "Continue monitoring."
+                "ผลกระทบต่อการดำเนินงานอยู่ในวงจำกัด",
+                "กำหนดเวลาติดตั้งอัปเดต",
+                "เฝ้าระวังอย่างต่อเนื่อง"
             ]
 
         return [
-            "Low business impact.",
-            "Apply normal patch process."
+            "มีผลกระทบต่อธุรกิจในระดับต่ำ",
+            "ดำเนินการตามกระบวนการอัปเดตตามปกติ"
         ]
 
     @staticmethod
@@ -252,10 +261,10 @@ class AwarenessGenerator:
             return recommendation
 
         return (
-            "Review affected assets.\n"
-            "Validate vendor advisory.\n"
-            "Deploy security updates.\n"
-            "Monitor for suspicious activity."
+            "ตรวจสอบทรัพย์สินที่อาจได้รับผลกระทบ\n"
+            "ตรวจสอบประกาศจากผู้ผลิต\n"
+            "ติดตั้งอัปเดตความปลอดภัย\n"
+            "เฝ้าระวังกิจกรรมที่น่าสงสัย"
         )
 
     @staticmethod
@@ -263,7 +272,7 @@ class AwarenessGenerator:
 
         return (
             f"[{threat.get('Severity')}] "
-            f"{threat.get('CVE')} Security Advisory"
+            f"{threat.get('CVE')} ประกาศด้านความมั่นคงปลอดภัยไซเบอร์"
         )
 
     @staticmethod
