@@ -48,8 +48,17 @@ class Config:
         "DEFAULT_DEPARTMENT",
         "Information Technology Department",
     )
+    DEFAULT_COMPANY_LOGO = os.getenv("DEFAULT_COMPANY_LOGO", "")
     DEFAULT_CLASSIFICATION = os.getenv(
         "DEFAULT_CLASSIFICATION",
+        "ใช้ภายในองค์กร",
+    )
+    DEFAULT_HEADER_TEXT = os.getenv(
+        "DEFAULT_HEADER_TEXT",
+        "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
+    )
+    DEFAULT_FOOTER_TEXT = os.getenv(
+        "DEFAULT_FOOTER_TEXT",
         "ใช้ภายในองค์กร",
     )
 

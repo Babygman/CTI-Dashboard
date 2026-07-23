@@ -75,6 +75,28 @@
                                value="{{ settings.get('Department', '') }}">
                     </div>
 
+                    <div class="col-lg-6">
+                        <label for="HeaderText" class="form-label fw-semibold">
+                            Header Text
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="HeaderText"
+                               name="HeaderText"
+                               value="{{ settings.get('HeaderText', '') }}">
+                    </div>
+
+                    <div class="col-lg-6">
+                        <label for="FooterText" class="form-label fw-semibold">
+                            Footer Text
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="FooterText"
+                               name="FooterText"
+                               value="{{ settings.get('FooterText', '') }}">
+                    </div>
+
                 </div>
             </div>
         </div>

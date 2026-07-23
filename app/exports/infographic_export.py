@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 from flask import current_app, has_app_context
@@ -10,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.models.system_setting import SystemSetting
+from config import Config
 
 
 class InfographicExporter:
@@ -29,9 +31,6 @@ class InfographicExporter:
     TEXT = "#1E293B"
     MUTED = "#64748B"
     BORDER = "#D8E1EA"
-    DEFAULT_COMPANY_NAME = "Sunstar Chemical (Thailand) Co., Ltd."
-    DEFAULT_DEPARTMENT = "Information Technology Department"
-
     @classmethod
     def _font(cls, size: int, bold: bool = False):
         candidates = (
@@ -181,16 +180,32 @@ class InfographicExporter:
     @classmethod
     def _settings(cls):
         defaults = {
-            "CompanyName": cls.DEFAULT_COMPANY_NAME,
-            "Department": cls.DEFAULT_DEPARTMENT,
+            "CompanyName": Config.DEFAULT_COMPANY_NAME,
+            "CompanyShortName": Config.DEFAULT_COMPANY_SHORT_NAME,
+            "Department": Config.DEFAULT_DEPARTMENT,
+            "CompanyLogo": "",
+            "HeaderText": Config.DEFAULT_HEADER_TEXT,
+            "FooterText": Config.DEFAULT_FOOTER_TEXT,
         }
         if not has_app_context():
             return defaults
         defaults["CompanyName"] = current_app.config.get(
-            "DEFAULT_COMPANY_NAME", cls.DEFAULT_COMPANY_NAME
+            "DEFAULT_COMPANY_NAME", Config.DEFAULT_COMPANY_NAME
+        )
+        defaults["CompanyShortName"] = current_app.config.get(
+            "DEFAULT_COMPANY_SHORT_NAME", Config.DEFAULT_COMPANY_SHORT_NAME
         )
         defaults["Department"] = current_app.config.get(
-            "DEFAULT_DEPARTMENT", cls.DEFAULT_DEPARTMENT
+            "DEFAULT_DEPARTMENT", Config.DEFAULT_DEPARTMENT
+        )
+        defaults["CompanyLogo"] = current_app.config.get(
+            "DEFAULT_COMPANY_LOGO", ""
+        )
+        defaults["HeaderText"] = current_app.config.get(
+            "DEFAULT_HEADER_TEXT", Config.DEFAULT_HEADER_TEXT
+        )
+        defaults["FooterText"] = current_app.config.get(
+            "DEFAULT_FOOTER_TEXT", Config.DEFAULT_FOOTER_TEXT
         )
         try:
             configured = {
@@ -202,6 +217,41 @@ class InfographicExporter:
             configured = {}
         defaults.update(configured)
         return defaults
+
+    @staticmethod
+    def _resolve_logo_path(company_logo):
+        if not company_logo or not has_app_context():
+            return None
+        normalized_path = str(company_logo).strip().replace("\\", "/")
+        if not normalized_path:
+            return None
+        if normalized_path.startswith("/static/"):
+            candidate = Path(current_app.static_folder) / normalized_path.removeprefix(
+                "/static/"
+            )
+        elif normalized_path.startswith("static/"):
+            candidate = Path(current_app.static_folder) / normalized_path.removeprefix(
+                "static/"
+            )
+        else:
+            candidate = Path(normalized_path)
+            if not candidate.is_absolute():
+                candidate = Path(current_app.root_path).parent / candidate
+        return candidate if candidate.is_file() else None
+
+    @classmethod
+    def _draw_logo(cls, image, company_logo, x, y, max_width=72, max_height=52):
+        logo_path = cls._resolve_logo_path(company_logo)
+        if not logo_path:
+            return 0
+        try:
+            with Image.open(logo_path) as logo_source:
+                logo = logo_source.convert("RGBA")
+                logo.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                image.paste(logo, (x, y), logo)
+                return logo.width
+        except (OSError, ValueError):
+            return 0
 
     @staticmethod
     def _localized_severity(value):
@@ -248,6 +298,7 @@ class InfographicExporter:
     def generate(cls, threat: dict[str, Any], infographic_content: dict[str, Any]):
         settings = cls._settings()
         company_name = settings["CompanyName"]
+        department = settings["Department"]
         image = Image.new("RGB", (cls.WIDTH, cls.HEIGHT), cls.BG)
         draw = ImageDraw.Draw(image)
         margin = 70
@@ -256,17 +307,34 @@ class InfographicExporter:
 
         headline = cls._safe(
             infographic_content.get("headline"),
-            "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
+            settings["HeaderText"],
         )
         actions = list(infographic_content.get("actions") or [])[:3]
         avoid = list(infographic_content.get("avoid") or [])[:3]
 
         draw.rectangle((0, 0, cls.WIDTH, 290), fill=cls.NAVY)
-        draw.text(
-            (margin, 42),
+        logo_width = cls._draw_logo(
+            image,
+            settings.get("CompanyLogo"),
+            margin,
+            34,
+        )
+        company_x = margin + logo_width + (18 if logo_width else 0)
+        cls._draw_wrapped(
+            draw,
             company_name,
-            font=cls._font(31, True),
+            (company_x, 42, 735, 82),
+            font=cls._font(26, True),
             fill=cls.LIGHT_BLUE,
+            max_lines=1,
+        )
+        cls._draw_wrapped(
+            draw,
+            department,
+            (755, 47, right, 82),
+            font=cls._font(22),
+            fill=cls.LIGHT_BLUE,
+            max_lines=1,
         )
         cls._draw_wrapped(
             draw,

@@ -22,6 +22,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from app.models.system_setting import SystemSetting
+from config import Config
 
 
 class PDFExporter:
@@ -65,30 +66,47 @@ class PDFExporter:
             settings,
             "CompanyName",
             "DEFAULT_COMPANY_NAME",
-            "Sunstar Chemical (Thailand) Co., Ltd.",
+            Config.DEFAULT_COMPANY_NAME,
         )
         company_short_name = PDFExporter._setting(
             settings,
             "CompanyShortName",
             "DEFAULT_COMPANY_SHORT_NAME",
-            "SUNSTAR",
+            Config.DEFAULT_COMPANY_SHORT_NAME,
         )
         department = PDFExporter._setting(
             settings,
             "Department",
             "DEFAULT_DEPARTMENT",
-            "Information Technology Department",
+            Config.DEFAULT_DEPARTMENT,
+        )
+        header_text = PDFExporter._setting(
+            settings,
+            "HeaderText",
+            "DEFAULT_HEADER_TEXT",
+            Config.DEFAULT_HEADER_TEXT,
+        )
+        footer_text = PDFExporter._setting(
+            settings,
+            "FooterText",
+            "DEFAULT_FOOTER_TEXT",
+            Config.DEFAULT_FOOTER_TEXT,
         )
         classification = PDFExporter._localized_classification(
             PDFExporter._setting(
                 settings,
                 "Classification",
                 "DEFAULT_CLASSIFICATION",
-                "ใช้ภายในองค์กร",
+                Config.DEFAULT_CLASSIFICATION,
             )
         )
         paper_size = settings.get("PaperSize", "A4")
-        company_logo = settings.get("CompanyLogo", "")
+        company_logo = PDFExporter._setting(
+            settings,
+            "CompanyLogo",
+            "DEFAULT_COMPANY_LOGO",
+            Config.DEFAULT_COMPANY_LOGO,
+        )
 
         primary_color = PDFExporter._parse_hex_color(
             settings.get("PrimaryColor"),
@@ -115,13 +133,13 @@ class PDFExporter:
             topMargin=3.5 * cm,
             bottomMargin=2.8 * cm,
             title=(
-                "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์ - "
+                f"{header_text} - "
                 f"{threat.get('CVE') or 'ไม่ระบุ CVE'}"
             ),
             author=department,
             subject=(
                 threat.get("Title")
-                or "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์"
+                or header_text
             ),
             creator=f"{company_name} Awareness Platform",
         )
@@ -145,7 +163,7 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "ประกาศด้านความมั่นคงปลอดภัยไซเบอร์",
+                PDFExporter._escape(header_text),
                 styles["title"],
             )
         )
@@ -227,6 +245,7 @@ class PDFExporter:
                 company_short_name=company_short_name,
                 department=department,
                 classification=classification,
+                footer_text=footer_text,
                 company_logo=company_logo,
                 primary_color=primary_color,
                 secondary_color=secondary_color,
@@ -631,6 +650,7 @@ class PDFExporter:
         company_short_name,
         department,
         classification,
+        footer_text,
         company_logo,
         primary_color,
         secondary_color,
@@ -681,7 +701,7 @@ class PDFExporter:
             canvas.drawString(
                 left_x,
                 top_y - 0.65 * cm,
-                str(company_short_name or "SUNSTAR"),
+                str(company_short_name),
             )
 
         canvas.setFillColor(primary_color)
@@ -689,7 +709,7 @@ class PDFExporter:
         canvas.drawRightString(
             right_x,
             top_y - 0.2 * cm,
-            str(company_name or "Sunstar Chemical (Thailand) Co., Ltd."),
+            str(company_name),
         )
 
         canvas.setFillColor(colors.black)
@@ -697,7 +717,7 @@ class PDFExporter:
         canvas.drawRightString(
             right_x,
             top_y - 0.65 * cm,
-            str(department or "Information Technology Department"),
+            str(department),
         )
 
         header_line_y = page_height - 2.55 * cm
@@ -716,13 +736,13 @@ class PDFExporter:
         canvas.drawString(
             left_x,
             1.5 * cm,
-            str(company_name or "Sunstar Chemical (Thailand) Co., Ltd."),
+            str(company_name),
         )
 
         canvas.drawCentredString(
             page_width / 2,
             1.5 * cm,
-            str(classification or "ใช้ภายในองค์กร"),
+            str(classification),
         )
 
         canvas.drawRightString(
@@ -734,7 +754,7 @@ class PDFExporter:
         canvas.drawCentredString(
             page_width / 2,
             1.1 * cm,
-            f"สร้างโดย {department or 'Information Technology Department'}",
+            str(footer_text),
         )
 
         canvas.restoreState()
