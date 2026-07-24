@@ -9,9 +9,6 @@ from app.models.collection_run import CollectionRun
 from app.models.source import Source
 
 
-RUNNABLE_FEED_TYPES = {"cisakev", "nvd"}
-
-
 class SourceAdministrationService:
     """Read existing source/run data and derive administration health state."""
 
@@ -21,13 +18,7 @@ class SourceAdministrationService:
 
     @staticmethod
     def create_collector(source):
-        kwargs = {"timeout_seconds": source.TimeoutSeconds}
-        if (
-            source.SourceType.casefold() in RUNNABLE_FEED_TYPES
-            and source.FeedUrl
-        ):
-            kwargs["feed_url"] = source.FeedUrl
-        return collector_registry.create(source.SourceType, **kwargs)
+        return collector_registry.create_for_source(source)
 
     @classmethod
     def list_sources(cls):

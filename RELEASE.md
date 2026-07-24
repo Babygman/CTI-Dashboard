@@ -122,3 +122,39 @@ Final verification:
 - Pytest: `190 passed, 3 skipped, 300 warnings, 55 subtests passed`
 - Ruff: passed
 - Template check: 35 templates compiled successfully
+
+## Phase 3 Threat Intelligence Source Framework
+
+### Scope
+
+- Retained the existing NVD and CISA KEV collectors.
+- Added registered Microsoft Security Response Center and JPCERT/CC
+  collectors using their official update and RSS endpoints.
+- Centralized source definitions and feed defaults.
+- Added generic construction of collectors from persisted `Sources` settings.
+- Connected every registered source to the existing scheduler, normalization,
+  canonical matching, deduplication, source-item, and threat-observation
+  pipeline.
+- Preserved the unified `Threat` model consumed by News, Relevant Threats,
+  Asset Matching, and Awareness generation.
+
+### Database migration
+
+- New migration head: `20260724_01`
+- Migration type: data-only; no schema changes
+- Existing source and threat data is preserved.
+- Newly configured JPCERT collection remains disabled until explicitly
+  enabled by an administrator.
+- Detailed deployment and rollback guidance:
+  `docs/PHASE3_SOURCE_FRAMEWORK.md`
+
+### Verification
+
+- Provider normalization tests cover official MSRC JSON and JPCERT RSS 1.0
+  payload shapes.
+- Shared-pipeline tests cover deduplication, source attribution, scheduler
+  discovery, and visibility on the existing News page.
+- Fresh-database migration reached `20260724_01 (head)` successfully.
+- Full pytest: `196 passed, 3 skipped, 312 warnings, 55 subtests passed`
+- Ruff: passed
+- Template check: 35 templates compiled successfully

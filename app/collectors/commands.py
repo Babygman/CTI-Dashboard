@@ -10,52 +10,20 @@ from app.models.collection_run import CollectionRun
 from app.models.source import Source
 
 from . import collector_registry
-from .cisa_kev import CISA_KEV_FEED_URL
-from .nvd import NVD_MODIFIED_FEED_URL
 from .service import run_collector
+from .source_config import (
+    DEFAULT_FEED_URLS,
+    RUNNABLE_SOURCE_TYPES,
+    SOURCE_DEFINITIONS,
+)
 
 
 collector_cli = AppGroup("collector", help="Manage threat collection sources and runs.")
 
 
-INITIAL_SOURCES = (
-    {
-        "SourceName": "CISA KEV",
-        "SourceType": "CisaKev",
-        "BaseUrl": "https://www.cisa.gov",
-        "FeedUrl": CISA_KEV_FEED_URL,
-    },
-    {
-        "SourceName": "NVD",
-        "SourceType": "Nvd",
-        "BaseUrl": "https://nvd.nist.gov",
-        "FeedUrl": NVD_MODIFIED_FEED_URL,
-    },
-    {
-        "SourceName": "Microsoft Security Response Center",
-        "SourceType": "Microsoft",
-        "BaseUrl": "https://msrc.microsoft.com",
-    },
-    {
-        "SourceName": "Fortinet PSIRT",
-        "SourceType": "Fortinet",
-        "BaseUrl": "https://www.fortiguard.com",
-    },
-    {
-        "SourceName": "Cisco Security Advisories",
-        "SourceType": "Cisco",
-        "BaseUrl": "https://sec.cloudapps.cisco.com",
-    },
-    {
-        "SourceName": "Veeam Security Advisories",
-        "SourceType": "Veeam",
-        "BaseUrl": "https://www.veeam.com",
-    },
-    {
-        "SourceName": "Broadcom VMware Advisories",
-        "SourceType": "Broadcom",
-        "BaseUrl": "https://support.broadcom.com",
-    },
+INITIAL_SOURCES = tuple(
+    definition.seed_values()
+    for definition in SOURCE_DEFINITIONS
 )
 
 
@@ -88,14 +56,7 @@ def seed_sources():
     click.echo(f"Source seeding complete: created={created}, existing={existing}")
 
 
-RUNNABLE_COLLECTORS = {
-    "cisa-kev": "CisaKev",
-    "nvd": "Nvd",
-}
-DEFAULT_FEED_URLS = {
-    "CisaKev": CISA_KEV_FEED_URL,
-    "Nvd": NVD_MODIFIED_FEED_URL,
-}
+RUNNABLE_COLLECTORS = RUNNABLE_SOURCE_TYPES
 
 
 @collector_cli.command("run")

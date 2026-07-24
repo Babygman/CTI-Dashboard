@@ -24,6 +24,14 @@ class BaseCollector(ABC):
             raise ValueError("timeout_seconds must be greater than zero")
         self.timeout_seconds = timeout_seconds
 
+    @classmethod
+    def from_source(cls, source):
+        """Build a collector from the common persisted source settings."""
+        kwargs = {"timeout_seconds": source.TimeoutSeconds}
+        if source.FeedUrl:
+            kwargs["feed_url"] = source.FeedUrl
+        return cls(**kwargs)
+
     @property
     def source_identity(self) -> dict[str, str]:
         return {

@@ -23,6 +23,9 @@ class CollectorRegistry:
     def create(self, source_type: str, **kwargs) -> BaseCollector:
         return self.get(source_type)(**kwargs)
 
+    def create_for_source(self, source) -> BaseCollector:
+        return self.get(source.SourceType).from_source(source)
+
     def registered_types(self) -> tuple[str, ...]:
         return tuple(sorted(self._collectors))
 
