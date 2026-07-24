@@ -1,22 +1,53 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 from math import ceil
 from types import SimpleNamespace
 
 from flask import flash, redirect, render_template, request, url_for
-from sqlalchemy import func, literal, not_
+from sqlalchemy import func, literal, not_, or_
 
 from app.extensions import db
 from app.models.asset import Asset
+from app.models.cve import CVE
 from app.models.news_item import NewsItem
+from app.models.source_item import SourceItem
 from app.models.threat import Threat
+from app.models.threat_cve import ThreatCVE
+from app.models.vendor import Vendor
 from app.services.relevance import assess_item, news_relevance, recommend
 
 from . import news_blueprint
 
 SEVERITIES = ("Critical", "High", "Medium", "Low", "Informational")
 THREAT_TYPES = ("Advisory", "Vulnerability", "Phishing", "Ransomware", "Malware", "Scam", "Other")
+NEWS_PAGE_SIZES = (25, 50, 100)
+
+
+def _date_filter(name):
+    value = request.args.get(name, "").strip()
+    if not value:
+        return "", None
+    try:
+        return value, datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return "", None
+
+
+def _source_options():
+    sources = db.select(NewsItem.Source.label("Source")).where(
+        NewsItem.Source.is_not(None)
+    ).union(
+        db.select(Threat.Source.label("Source")).where(
+            Threat.Source.is_not(None)
+        )
+    ).subquery()
+    return db.session.scalars(
+        db.select(sources.c.Source)
+        .where(sources.c.Source != "")
+        .distinct()
+        .order_by(sources.c.Source)
+    ).all()
 
 
 def _form(item=None):
@@ -92,14 +123,29 @@ def index():
     if relevance not in {"relevant", "not-relevant"}:
         relevance = ""
     page = max(request.args.get("page", 1, type=int), 1)
-    per_page = 25
+    per_page = request.args.get("per_page", 25, type=int)
+    if per_page not in NEWS_PAGE_SIZES:
+        per_page = 25
+    query = request.args.get("q", "").strip()
+    source = request.args.get("source", "").strip()
+    severity = request.args.get("severity", "").strip()
+    if severity not in SEVERITIES:
+        severity = ""
+    recommendation = request.args.get("recommendation", "").strip()
+    date_from, date_from_value = _date_filter("date_from")
+    date_to, date_to_value = _date_filter("date_to")
 
     assets = db.session.execute(
         db.select(Asset).where(Asset.Status == "Active")
     ).scalars().all()
-    from app.threats.routes import _relevant_threat_expressions
+    from app.threats.routes import (
+        RELEVANT_THREAT_RECOMMENDATIONS,
+        _relevant_threat_expressions,
+    )
 
     expressions = _relevant_threat_expressions(assets)
+    if recommendation not in RELEVANT_THREAT_RECOMMENDATIONS:
+        recommendation = ""
     manual_news = db.select(
         literal("news").label("RecordType"),
         NewsItem.NewsItemId.label("RecordId"),
@@ -130,6 +176,72 @@ def index():
         Threat.Recommendation.label("RawRecommendation"),
         Threat.KEV,
     )
+    if query:
+        pattern = f"%{query}%"
+        manual_news = manual_news.where(
+            or_(
+                NewsItem.Title.ilike(pattern),
+                NewsItem.Summary.ilike(pattern),
+                NewsItem.Vendor.ilike(pattern),
+                NewsItem.Product.ilike(pattern),
+                NewsItem.CVE.ilike(pattern),
+                NewsItem.Source.ilike(pattern),
+            )
+        )
+        collected_threats = collected_threats.outerjoin(
+            Vendor, Vendor.VendorId == Threat.VendorId
+        ).where(
+            or_(
+                Threat.Title.ilike(pattern),
+                Threat.Summary.ilike(pattern),
+                Vendor.VendorName.ilike(pattern),
+                Threat.CVE.ilike(pattern),
+                Threat.Source.ilike(pattern),
+                Threat.cve_links.any(
+                    ThreatCVE.cve.has(CVE.CVECode.ilike(pattern))
+                ),
+                db.select(SourceItem.SourceItemId)
+                .where(
+                    SourceItem.ThreatId == Threat.ThreatId,
+                    or_(
+                        SourceItem.Title.ilike(pattern),
+                        SourceItem.CVE.ilike(pattern),
+                        SourceItem.NormalizedMetadata.ilike(pattern),
+                    ),
+                )
+                .exists(),
+            )
+        )
+    if source:
+        manual_news = manual_news.where(NewsItem.Source == source)
+        collected_threats = collected_threats.where(Threat.Source == source)
+    if severity:
+        manual_news = manual_news.where(NewsItem.Severity == severity)
+        collected_threats = collected_threats.where(
+            Threat.Severity == severity
+        )
+    if recommendation:
+        manual_news = manual_news.where(
+            NewsItem.RecommendationType == recommendation
+        )
+        collected_threats = collected_threats.where(
+            expressions["recommendations"][recommendation]
+        )
+    if date_from_value:
+        manual_news = manual_news.where(
+            NewsItem.PublishedDate >= date_from_value
+        )
+        collected_threats = collected_threats.where(
+            Threat.PublishedDate >= date_from_value
+        )
+    if date_to_value:
+        exclusive_end = date_to_value + timedelta(days=1)
+        manual_news = manual_news.where(
+            NewsItem.PublishedDate < exclusive_end
+        )
+        collected_threats = collected_threats.where(
+            Threat.PublishedDate < exclusive_end
+        )
     if relevance == "relevant":
         manual_news = manual_news.where(NewsItem.IsRelevant == True)
         collected_threats = collected_threats.where(
@@ -140,6 +252,24 @@ def index():
         collected_threats = collected_threats.where(
             not_(expressions["relevant"])
         )
+    filter_query = {
+        key: value
+        for key, value in {
+            "q": query,
+            "source": source,
+            "severity": severity,
+            "recommendation": recommendation,
+            "date_from": date_from,
+            "date_to": date_to,
+            "per_page": per_page,
+        }.items()
+        if value not in ("", None)
+    }
+    page_size_query = {
+        key: value
+        for key, value in filter_query.items()
+        if key != "per_page"
+    }
     feed = manual_news.union_all(collected_threats).subquery()
     statement = db.select(feed)
     total = db.session.scalar(
@@ -201,7 +331,20 @@ def index():
         relevance=relevance,
         page=page,
         pages=pages,
+        per_page=per_page,
+        page_sizes=NEWS_PAGE_SIZES,
         total=total,
+        q=query,
+        sources=_source_options(),
+        selected_source=source,
+        severity_options=SEVERITIES,
+        selected_severity=severity,
+        recommendation_options=RELEVANT_THREAT_RECOMMENDATIONS,
+        selected_recommendation=recommendation,
+        date_from=date_from,
+        date_to=date_to,
+        filter_query=filter_query,
+        page_size_query=page_size_query,
     )
 
 

@@ -98,13 +98,18 @@ class SourceAdministrationRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         for expected in (
-            b"Source Administration",
+            b"Threat Sources",
             b"CISA KEV",
             b"Healthy",
             b"Success",
             b"Network timeout",
             b"Planned Vendor",
             b"Disabled",
+            b"Collector",
+            b"Records Imported",
+            b"New Threats",
+            b"Duration:",
+            b"Run Now",
         ):
             self.assertIn(expected, response.data)
 

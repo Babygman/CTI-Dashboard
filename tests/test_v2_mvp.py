@@ -129,6 +129,112 @@ def test_news_lists_collected_threats_and_preserves_relevance_tabs():
     assert b"Credential phishing campaign" not in not_relevant.data
 
 
+def test_news_searches_and_filters_manual_and_collected_records_in_sql():
+    app = app_with_schema()
+    client = app.test_client()
+    with app.app_context():
+        vendor = Vendor(VendorName="Fortinet", Enabled=True)
+        db.session.add(vendor)
+        db.session.flush()
+        db.session.add_all(
+            [
+                NewsItem(
+                    Title="Manual network advisory",
+                    Source="JPCERT",
+                    ReferenceUrl="https://example.test/manual",
+                    PublishedDate=datetime(2026, 7, 10),
+                    Summary="Security notice for administrators",
+                    Vendor="Cisco",
+                    Product="Catalyst C9300",
+                    CVE="CVE-2026-4000",
+                    Severity="High",
+                    IsRelevant=True,
+                    RecommendationType="Need Patch",
+                ),
+                Threat(
+                    Title="FortiGate security update",
+                    VendorId=vendor.VendorId,
+                    Source="Microsoft Security Response Center",
+                    PublishedDate=datetime(2026, 7, 20),
+                    Summary="Fortinet gateway maintenance",
+                    CVE="CVE-2026-5000",
+                    Severity="Critical",
+                ),
+                Threat(
+                    Title="Unrelated Linux advisory",
+                    Source="NVD",
+                    PublishedDate=datetime(2026, 6, 1),
+                    Severity="Low",
+                ),
+            ]
+        )
+        db.session.commit()
+
+    cases = (
+        ("q=FortiGate", b"FortiGate security update"),
+        ("q=Security+notice", b"Manual network advisory"),
+        ("q=Catalyst+C9300", b"Manual network advisory"),
+        ("q=CVE-2026-4000", b"Manual network advisory"),
+        ("q=JPCERT", b"Manual network advisory"),
+        ("q=Fortinet", b"FortiGate security update"),
+        (
+            "source=Microsoft+Security+Response+Center",
+            b"FortiGate security update",
+        ),
+        ("severity=Critical", b"FortiGate security update"),
+        (
+            "date_from=2026-07-15&date_to=2026-07-31",
+            b"FortiGate security update",
+        ),
+    )
+    for parameters, expected in cases:
+        response = client.get(f"/news/?{parameters}")
+        assert response.status_code == 200
+        assert expected in response.data
+        assert b"Unrelated Linux advisory" not in response.data
+
+    recommended = client.get(
+        "/news/?recommendation=Need+Patch&relevance=relevant"
+    )
+    assert b"Manual network advisory" in recommended.data
+    assert b"Unrelated Linux advisory" not in recommended.data
+
+
+def test_news_pagination_preserves_search_filters_and_page_size():
+    app = app_with_schema()
+    client = app.test_client()
+    with app.app_context():
+        db.session.add_all(
+            [
+                Threat(
+                    Title=f"Microsoft bulletin {index:02d}",
+                    Source="Microsoft Security Response Center",
+                    Severity="High",
+                    PublishedDate=datetime(2026, 7, index),
+                )
+                for index in range(1, 31)
+            ]
+        )
+        db.session.commit()
+
+    response = client.get(
+        "/news/?q=Microsoft&source=Microsoft+Security+Response+Center"
+        "&severity=High&date_from=2026-07-01&date_to=2026-07-31"
+        "&per_page=25"
+    )
+
+    assert response.status_code == 200
+    assert b"Total records: 30" in response.data
+    assert b"page=2" in response.data
+    assert b"q=Microsoft" in response.data
+    assert b"source=Microsoft+Security+Response+Center" in response.data
+    assert b"severity=High" in response.data
+    assert b"date_from=2026-07-01" in response.data
+    assert b"date_to=2026-07-31" in response.data
+    assert b"per_page=25" in response.data
+    assert b"Reset" in response.data
+
+
 def test_relevant_threats_paginates_and_preserves_filter_and_page_size():
     app = app_with_schema()
     client = app.test_client()

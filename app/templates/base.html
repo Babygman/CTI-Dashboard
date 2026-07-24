@@ -261,7 +261,7 @@
                     Product Catalog
 
                 </a>
-                <a href="{{ url_for('sources.source_list') }}" class="list-group-item list-group-item-action{% if request.blueprint == 'sources' %} active{% endif %}"{% if request.blueprint == 'sources' %} aria-current="page"{% endif %}><i class="bi bi-broadcast-pin me-2"></i>Sources</a>
+                <a href="{{ url_for('sources.source_list') }}" class="list-group-item list-group-item-action{% if request.blueprint == 'sources' %} active{% endif %}"{% if request.blueprint == 'sources' %} aria-current="page"{% endif %}><i class="bi bi-broadcast-pin me-2"></i>Threat Sources</a>
                 <a href="{{ url_for('actions.action_list') }}" class="list-group-item list-group-item-action{% if request.blueprint == 'actions' %} active{% endif %}"{% if request.blueprint == 'actions' %} aria-current="page"{% endif %}><i class="bi bi-list-check me-2"></i>Remediation Actions</a>
 
                 <a href="{{ url_for('settings.index') }}"

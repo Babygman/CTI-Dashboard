@@ -123,6 +123,44 @@ Final verification:
 - Ruff: passed
 - Template check: 35 templates compiled successfully
 
+## Phase 4 Sprint 1: News Search and Source Management
+
+### News
+
+- Added SQL-backed search across title, summary, vendor, product, CVE, and
+  source for the unified manual-and-collected News feed.
+- Added source, severity, recommendation, relevance, and inclusive date-range
+  filters.
+- Added 25, 50, and 100 page sizes.
+- Preserved the existing sorting, relevance tabs, record totals, detail
+  links, and Awareness actions.
+- Active search and filter values remain selected across tabs, pages, and
+  page-size changes.
+
+### Threat Sources
+
+- Renamed the Administration menu entry and source list to Threat Sources.
+- The list continues to include every configured source and now exposes
+  collector, interval, latest run/success, status, persisted imports, new
+  threats, and errors.
+- Added inline Enable, Disable, and Run Now actions using the existing source
+  routes and collection runner.
+- Latest duration and imported, updated, skipped, and error details are
+  derived from existing persisted `CollectionRuns` history.
+- No schema migration or collector changes were required.
+
+Detailed administrator and verification notes are available in
+`docs/PHASE4_SOURCE_MANAGEMENT.md`.
+
+Validation:
+
+- Pytest: `198 passed, 3 skipped, 345 warnings, 55 subtests passed`
+- Ruff: passed
+- Template compilation: 35 templates passed
+- Production SQL Server query smoke tests: passed for English and Japanese
+  search, source/severity/recommendation/date filters, page size, and Threat
+  Sources status rendering
+
 ## Phase 3 Threat Intelligence Source Framework
 
 ### Scope

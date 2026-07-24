@@ -7,6 +7,7 @@ from app.collectors.service import utcnow
 from app.extensions import db
 from app.models.collection_run import CollectionRun
 from app.models.source import Source
+from app.models.source_item import SourceItem
 
 
 class SourceAdministrationService:
@@ -30,6 +31,7 @@ class SourceAdministrationService:
             )
         ).scalars().all()
         stats = cls._stats_by_source()
+        item_counts = cls._item_counts_by_source()
         latest_runs = cls._latest_runs_by_source()
         latest_errors = cls._latest_errors_by_source()
         return [
@@ -38,6 +40,7 @@ class SourceAdministrationService:
                 stats.get(source.SourceId, {}),
                 latest_runs.get(source.SourceId),
                 latest_errors.get(source.SourceId),
+                item_counts.get(source.SourceId, 0),
             )
             for source in sources
         ]
@@ -54,7 +57,11 @@ class SourceAdministrationService:
             .limit(1)
         )
         return cls._source_view(
-            source, stats, latest_run, latest_error
+            source,
+            stats,
+            latest_run,
+            latest_error,
+            cls._item_count_for_source(source.SourceId),
         )
 
     @staticmethod
@@ -97,6 +104,15 @@ class SourceAdministrationService:
             func.sum(
                 case((CollectionRun.Status == "Partial", 1), else_=0)
             ).label("partial_count"),
+            func.sum(CollectionRun.ItemsCreated).label("created_count"),
+            func.sum(CollectionRun.ItemsUpdated).label("updated_count"),
+            func.sum(CollectionRun.ItemsSkipped).label("skipped_count"),
+            func.sum(
+                case(
+                    (CollectionRun.ErrorMessage.is_not(None), 1),
+                    else_=0,
+                )
+            ).label("error_count"),
         ).group_by(CollectionRun.SourceId)
 
     @classmethod
@@ -114,6 +130,29 @@ class SourceAdministrationService:
             )
         ).first()
         return dict(row._mapping) if row else {}
+
+    @staticmethod
+    def _item_counts_by_source():
+        return {
+            row.SourceId: row.item_count
+            for row in db.session.execute(
+                db.select(
+                    SourceItem.SourceId,
+                    func.count(SourceItem.SourceItemId).label("item_count"),
+                ).group_by(SourceItem.SourceId)
+            )
+        }
+
+    @staticmethod
+    def _item_count_for_source(source_id):
+        return (
+            db.session.scalar(
+                db.select(func.count(SourceItem.SourceItemId)).where(
+                    SourceItem.SourceId == source_id
+                )
+            )
+            or 0
+        )
 
     @staticmethod
     def _ranked_runs(*, errors_only=False):
@@ -165,7 +204,14 @@ class SourceAdministrationService:
         return {run.SourceId: run for run in rows}
 
     @classmethod
-    def _source_view(cls, source, stats, latest_run, latest_error):
+    def _source_view(
+        cls,
+        source,
+        stats,
+        latest_run,
+        latest_error,
+        item_count,
+    ):
         next_run = cls._next_run(source, latest_run)
         health, health_class = cls._health(
             source, latest_run, next_run
@@ -183,6 +229,12 @@ class SourceAdministrationService:
             "failure_count": stats.get("failure_count", 0) or 0,
             "partial_count": stats.get("partial_count", 0) or 0,
             "total_count": stats.get("total_count", 0) or 0,
+            "records_imported": item_count,
+            "new_threats": stats.get("created_count", 0) or 0,
+            "updated_count": stats.get("updated_count", 0) or 0,
+            "skipped_count": stats.get("skipped_count", 0) or 0,
+            "error_count": stats.get("error_count", 0) or 0,
+            "last_duration_seconds": cls._duration_seconds(latest_run),
             "last_error": (
                 latest_error.ErrorMessage if latest_error else None
             ),
@@ -190,6 +242,12 @@ class SourceAdministrationService:
             "health_class": health_class,
             "collector_available": cls.collector_available(source),
         }
+
+    @staticmethod
+    def _duration_seconds(run):
+        if run is None or run.FinishedAt is None:
+            return None
+        return max((run.FinishedAt - run.StartedAt).total_seconds(), 0)
 
     @staticmethod
     def _next_run(source, latest_run):

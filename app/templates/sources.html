@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Sources | CTI Platform{% endblock %}
+{% block title %}Threat Sources | CTI Platform{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="mb-1">Source Administration</h2>
+        <h2 class="mb-1">Threat Sources</h2>
         <p class="text-muted mb-0">
-            Collection status and health for configured threat sources.
+            Configured collectors, execution status, and import history.
         </p>
     </div>
 </div>
@@ -18,16 +18,17 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Source</th>
+                        <th>Source Name</th>
                         <th>Enabled</th>
-                        <th>Health</th>
-                        <th>Status</th>
+                        <th>Collector</th>
+                        <th>Interval</th>
                         <th>Last Run</th>
-                        <th>Next Run</th>
-                        <th>Success</th>
-                        <th>Failure</th>
-                        <th>Last Error</th>
-                        <th></th>
+                        <th>Last Success</th>
+                        <th>Status</th>
+                        <th>Records Imported</th>
+                        <th>New Threats</th>
+                        <th>Errors</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,42 +36,62 @@
                     <tr>
                         <td>
                             <div class="fw-semibold">{{ row.source.SourceName }}</div>
-                            <small class="text-muted">{{ row.source.SourceType }}</small>
                         </td>
                         <td>{{ "Yes" if row.source.Enabled else "No" }}</td>
                         <td>
-                            <span class="badge text-bg-{{ row.health_class }}">
-                                {{ row.health }}
-                            </span>
+                            {{ row.source.SourceType }}
+                            {% if not row.collector_available %}<div class="small text-danger">Not implemented</div>{% endif %}
                         </td>
-                        <td>{{ row.status }}</td>
+                        <td>{{ row.source.CollectionIntervalMinutes }} min</td>
                         <td>
                             {{ row.latest_run.StartedAt if row.latest_run else "Never" }}
                         </td>
                         <td>
-                            {% if not row.source.Enabled %}
-                                Disabled
-                            {% elif row.next_run %}
-                                {{ row.next_run }}
-                            {% else %}
-                                Due now
-                            {% endif %}
-                        </td>
-                        <td>{{ row.success_count }}</td>
-                        <td>{{ row.failure_count }}</td>
-                        <td class="text-truncate" style="max-width: 240px;">
-                            {{ row.last_error or "—" }}
+                            {{ row.source.LastSuccessfulCollection or "Never" }}
                         </td>
                         <td>
+                            <span class="badge text-bg-{{ row.health_class }}">{{ row.status }}</span>
+                            <div class="small text-muted">{{ row.health }}</div>
+                            <div class="small text-muted">
+                                Duration:
+                                {% if row.last_duration_seconds is not none %}{{ "%.2f"|format(row.last_duration_seconds) }}s{% else %}—{% endif %}
+                            </div>
+                            {% if row.latest_run %}
+                            <div class="small text-muted">
+                                Imported {{ row.latest_run.ItemsCreated }} ·
+                                Updated {{ row.latest_run.ItemsUpdated }} ·
+                                Skipped {{ row.latest_run.ItemsSkipped }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.records_imported }}</td>
+                        <td>{{ row.new_threats }}</td>
+                        <td>
+                            {{ row.error_count }}
+                            {% if row.last_error %}<div class="small text-danger text-truncate" style="max-width: 180px;" title="{{ row.last_error }}">{{ row.last_error }}</div>{% endif %}
+                        </td>
+                        <td class="text-nowrap">
                             <a class="btn btn-sm btn-outline-primary"
                                href="{{ url_for('sources.source_detail', source_id=row.source.SourceId) }}">
                                 View
                             </a>
+                            {% if row.source.Enabled %}
+                            <form method="post" class="d-inline" action="{{ url_for('sources.disable_source', source_id=row.source.SourceId) }}">
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Disable</button>
+                            </form>
+                            {% else %}
+                            <form method="post" class="d-inline" action="{{ url_for('sources.enable_source', source_id=row.source.SourceId) }}">
+                                <button class="btn btn-sm btn-outline-success" type="submit">Enable</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" class="d-inline" action="{{ url_for('sources.run_source', source_id=row.source.SourceId) }}" onsubmit="return confirm('Run this collector now?');">
+                                <button class="btn btn-sm btn-primary" type="submit" {% if not row.collector_available or row.status == "Running" %}disabled{% endif %}>Run Now</button>
+                            </form>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-5">
+                        <td colspan="11" class="text-center text-muted py-5">
                             No collection sources are configured.
                         </td>
                     </tr>
